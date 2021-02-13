@@ -1,69 +1,97 @@
 import os
+import time
 from io import open
 from typing import List, Dict
+import numpy as np
+import nltk
 
 PATH='test_corpora'
 
-class Dictionary(object):
-    def __init__(self, frequency_threshold):
-        self.word2idx = {'<pad_sequences>': 0, '<unk>': 1}
-        self.idx2word = ['<pad_sequences>', '<unk>']
-        self.word2freq = {}
+def _load_text_data(path: str) -> str:
+    """
+    read text file
+    :param path:
+    :return:
+    """
+    with open(path, 'r') as f:
+        text = f.read() #f.readlines()
 
-    def add_word(self, word:str) -> int:
-        if word not in self.word2idx:
-            self.idx2word.append(word)
-            self.word2idx[word] = len(self.idx2word) - 1
-        return self.word2idx[word]
+    return text
 
-    def filter(self):
-        #TODO: apply frequency threshold
-        pass
 
-    def __len__(self):
-        return len(self.idx2word)
+def _tokenize(text: str) -> List[str]:
+    """
+    Remove unwanted tokens like <s> and \n
+    :param text: tokens separated by ' '
+    :return: list of tokens
+    """
+    text = text.replace('<s>', '')
+    text = text.replace('\n', ' ')
+    text = text.replace('  ', ' ')
+    text = text.strip()
 
-class Corpus(object):
-    def __init__(self, path:str, topic:str):
-        self.dictionary = Dictionary()
-        self.train = self.convert_to_int_lists(os.path.join(path, f"{topic}.train.txt"))
-        self.valid = self.convert_to_int_lists(os.path.join(path, f"{topic}.valid.txt"))
-        self.test = self.convert_to_int_lists(os.path.join(path, f"{topic}.test.txt"))
+    return text.split(' ')
 
-    def convert_to_int_lists(self, path:str):
-        """
-        We split the text corpus files into lines,
-        lines into tokens,
-        and we map those tokens to ints
-        :param path:
-        :return:
-        """
-        assert os.path.exists(path)
 
-        # First we populate the dictionary
-        with open(path, 'r', encoding="utf8") as f:
-            for line in f:
-                # we remove have '<s>' because it always follows '</s>'
-                line = line.replace('<s>', '')
-                # we already have '</s>' to signify end of sentence
-                words = line.split()
-                # words = line.split() + ['<eos>']
-                for word in words:
-                    self.dictionary.add_word(word)
+def apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
+    """
+    :param words: list of tokens
+    :param threshold: frequency threshold
+    :return: list of tokens, where tokens with frequency below the threshold are replaced by 'unk'
+    """
+    # Get Frequency distribution
+    freq_dist = nltk.FreqDist(words)
+    above_threshold = dict()
+    below_threshold = dict()
 
-        # Tokenize file content and pad_sequences sequences
-        with open(path, 'r', encoding="utf8") as f:
-            word_id_sequences = []
-            for line in f:
-                # we remove have '<s>' because it always follows '</s>'
-                line = line.replace('<s>', '').strip()
-                # we already have '</s>' to signify end of sentence
-                words = line.split()
-                # words = line.split() + ['<eos>']
-                # word_ids = []
-                word_ids = [self.dictionary.word2idx[word] for word in words]
-                # for word in words:
-                #    word_ids.append(self.dictionary.word2idx[word])
-                word_id_sequences.append(word_ids)
+    #FreqDist.iteritems() returns items in decreasing order of frequency
+    for x, f in freq_dist.items():
+        if not freq_dist[x] > threshold:
+            below_threshold[x] = f
+        else:
+            above_threshold[x] = f
 
-        return word_id_sequences
+    words = ['<unk>' if word in below_threshold else word for word in words]
+
+    return words
+
+
+def init_corpus(path:str, topic:str, frequency_threshold:int):
+    """
+
+    :param path:
+    :param topic:
+    :return:
+    """
+    # read the text
+    train = _load_text_data(os.path.join(path, f"{topic}.train.txt"))
+    valid = _load_text_data(os.path.join(path, f"{topic}.valid.txt"))
+    test = _load_text_data(os.path.join(path, f"{topic}.test.txt"))
+
+    # split into word/token
+    train = _tokenize(text=train)
+    valid = _tokenize(text=valid)
+    test = _tokenize(text=test)
+
+    # apply frequency threshold to training set
+    train = apply_freq_threshold(words=train, threshold=frequency_threshold)
+    # create vocabulary: set of words in train and word to index mapping
+    words = sorted(set(train))
+    word2index = {word: index for index, word in enumerate(words)}
+
+    # convert each word to a list of integers. if word is not in vocab, we use unk
+    train = [word2index[word] if word in word2index else word2index['<unk>'] for word in train]
+    valid = [word2index[word] if word in word2index else word2index['<unk>'] for word in valid]
+    test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
+
+    return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
+
+if __name__=='__main__':
+    start_time = time.time()
+    # PATH = 'data/test_corpora'
+    PATH = 'data/corpora'
+    topic = 'nyt_covid'
+    train, valid, test, vocab_size = init_corpus(PATH, topic, 3)
+    print(train)
+    execution_time = (time.time() - start_time)
+    print('Execution time in seconds: ' + str(execution_time))
