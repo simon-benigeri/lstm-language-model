@@ -5,11 +5,8 @@ from typing import List, Dict, Tuple
 import numpy as np
 import nltk
 import torch
-<<<<<<< HEAD
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
-=======
->>>>>>> 831045591362d345461ac8fccb45607ec6baa787
 
 def _load_text_data(path: str) -> str:
     """
@@ -80,6 +77,7 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
     train = apply_freq_threshold(words=train, threshold=frequency_threshold)
     # create vocabulary: set of words in train and word to index mapping
     words = sorted(set(train))
+    words.insert(0, '<pad>')
     word2index = {word: index for index, word in enumerate(words)}
 
     # convert each word to a list of integers. if word is not in vocab, we use unk
@@ -87,21 +85,32 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
     valid = [word2index[word] if word in word2index else word2index['<unk>'] for word in valid]
     test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
 
-    return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
+    # return list of len n to (n, 1) matrix
+    # return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
+    return np.array(train), np.array(valid), np.array(test), len(words)
 
-#Batches the data with [T, B] dimensionality.
-def minibatch(data, batch_size, seq_length):
-    data = torch.tensor(data, dtype = torch.int64)
-    num_batches = data.size(0)//batch_size
-    data = data[:num_batches*batch_size]
-    data=data.view(batch_size,-1)
-    dataset = []
-    for i in range(0,data.size(1)-1,seq_length):
-        seqlen=int(np.min([seq_length,data.size(1)-1-i]))
-        if seqlen<data.size(1)-1-i:
-            x=data[:,i:i+seqlen].transpose(1, 0)
-            y=data[:,i+1:i+seqlen+1].transpose(1, 0)
-            dataset.append((x, y))
+
+def generate_datasets(data:np.ndarray, time_steps:int) -> List[Tuple]:
+    """
+    :param data: sequence of integer representation of words
+    :param time_steps: number of time steps in LSTM cell
+    :return:
+    """
+    data = torch.tensor(data, dtype=torch.int64)
+    # split tensor into tensors of of size time_steps
+    data = torch.split(tensor=data, split_size_or_sections=time_steps)
+
+    # note: word2index['<pad>'] = 0
+    sequences = pad_sequence(data, batch_first=True, padding_value=0)
+
+    # from seq we generate 2 copies.
+    # inputs=seq[:-1], targets=seq[1:]
+    sequences_input = sequences.narrow_copy(1, 0, sequences.shape[1] - 1)
+    sequences_target = sequences.narrow_copy(1, 1, sequences.shape[1] - 1)
+
+    # dataset is a list of tuples to pair each input with its respective target
+    dataset = [(X, y) for X, y in zip(sequences_input, sequences_target)]
+
     return dataset
 
 
@@ -110,7 +119,7 @@ if __name__=='__main__':
     # PATH = 'data/test_corpora'
     PATH = 'data/test_corpora'
     TOPIC = 'nyt_covid'
-    batch_size = 1
+    batch_size = 2
     time_steps = 20
     freq_threshold = 3
     epochs = 1
