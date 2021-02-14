@@ -3,3 +3,7 @@ obsolete
 .DS_Store
 .idea/
 *.zip
+notebooks
+.ipynb_checkpoints
+.idea
+__pycache__

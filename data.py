@@ -5,6 +5,9 @@ from typing import List, Dict, Tuple
 import numpy as np
 import nltk
 import torch
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import Dataset, DataLoader
+
 
 def _load_text_data(path: str) -> str:
     """
@@ -14,7 +17,6 @@ def _load_text_data(path: str) -> str:
     """
     with open(path, 'r') as f:
         text = f.read() #f.readlines()
-
     return text
 
 
@@ -31,7 +33,7 @@ def _tokenize(text: str) -> List[str]:
     return words
 
 
-def apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
+def _apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
     """
     :param words: list of tokens
     :param threshold: frequency threshold
@@ -54,9 +56,9 @@ def apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
     return filtered_words
 
 
-def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+def _init_corpora(path:str, topic:str, freq_threshold:int
+                  ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, int]]:
     """
-
     :param path:
     :param topic:
     :return:
@@ -72,9 +74,10 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
     test = _tokenize(text=test)
 
     # apply frequency threshold to training set
-    train = apply_freq_threshold(words=train, threshold=frequency_threshold)
+    train = _apply_freq_threshold(words=train, threshold=freq_threshold)
     # create vocabulary: set of words in train and word to index mapping
     words = sorted(set(train))
+    words.insert(0, '<pad>')
     word2index = {word: index for index, word in enumerate(words)}
 
     # convert each word to a list of integers. if word is not in vocab, we use unk
@@ -82,34 +85,102 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
     valid = [word2index[word] if word in word2index else word2index['<unk>'] for word in valid]
     test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
 
-    return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
+    # return list of len n to (n, 1) matrix
+    # return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
+    return np.array(train), np.array(valid), np.array(test), word2index
 
-#Batches the data with [T, B] dimensionality.
-def minibatch(data, batch_size, seq_length):
-    data = torch.tensor(data, dtype = torch.int64)
-    num_batches = data.size(0)//batch_size
-    data = data[:num_batches*batch_size]
-    data=data.view(batch_size,-1)
-    dataset = []
-    for i in range(0,data.size(1)-1,seq_length):
-        seqlen=int(np.min([seq_length,data.size(1)-1-i]))
-        if seqlen<data.size(1)-1-i:
-            x=data[:,i:i+seqlen].transpose(1, 0)
-            y=data[:,i+1:i+seqlen+1].transpose(1, 0)
-            dataset.append((x, y))
-    return dataset
+
+def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[Tuple]:
+    """
+    :param data: sequence of integer representation of words
+    :param time_steps: number of time steps in LSTM cell
+    :return:
+    """
+    data = torch.tensor(data, dtype=torch.int64)
+    # split tensor into tensors of of size time_steps
+    data = torch.split(tensor=data, split_size_or_sections=time_steps)
+
+    # note: word2index['<pad>'] = 0
+    sequences = pad_sequence(data, batch_first=True, padding_value=0)
+
+    # from seq we generate 2 copies.
+    # inputs=seq[:-1], targets=seq[1:]
+    sequences_inputs = sequences.narrow_copy(1, 0, sequences.shape[1] - 1)
+    sequences_targets = sequences.narrow_copy(1, 1, sequences.shape[1] - 1)
+
+    return (sequences_inputs, sequences_targets)
+
+
+class Sequence_Data(Dataset):
+    def __init__(self, x:torch.tensor, y:torch.tensor):
+        self.x = x
+        self.y = y
+        self.len = x.shape[0]
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx]
+
+    def __len__(self):
+        return self.len
+
+
+def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> DataLoader:
+    """
+    :param data: input list of integers
+    :param batch_size: hyper parameter, for minibatch size
+    :param time_steps: hyper parameter for sequence length for bptt
+    :return: DataLoader for SGD
+    """
+    # given int list, generate input and output sequences of length = time_steps
+    inputs, targets = _generate_io_sequences(data=data, time_steps=time_steps)
+
+    # create Dataset object
+    dataset = Sequence_Data(x=inputs, y=targets)
+
+    # create dataloader
+    data_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
+
+    return data_loader
+
+
+def init_datasets(path: str, topic:str, freq_threshold:int, time_steps:int, batch_size:int) -> Dict:
+    """
+    :param path: path to data files: [topic].train.txt
+    :param topic: [topic].train.txt, where topic can be wikitext, or nyt_covid
+    :param freq_threshold: hyperparam, words in training set with freq < threshold are replaced by '<unk>'
+    :param time_steps: hyperparam, number of time steps and therefore seq_length for bptt
+    :param batch_size: hyperparam, batch size
+    :return: datasets dict
+    """
+    train, valid, test, word2index = _init_corpora(path=path, topic=topic, freq_threshold=freq_threshold)
+
+    datasets = {
+        'data_loaders': {
+            'train': _intlist_to_dataloader(data=train, time_steps=time_steps, batch_size=batch_size),
+            'valid': _intlist_to_dataloader(data=valid, time_steps=time_steps, batch_size=batch_size),
+            'test': _intlist_to_dataloader(data=test, time_steps=time_steps, batch_size=batch_size)
+        },
+        'word2index': word2index,
+        'vocab_size': len(word2index)
+    }
+
+    return datasets
 
 
 if __name__=='__main__':
     start_time = time.time()
     # PATH = 'data/test_corpora'
-    PATH = 'data/test_corpora'
-    topic = 'nyt_covid'
-    train, valid, test, vocab_size = init_corpus(PATH, topic, 3)
-    print(test)
-    a = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8]).reshape(-1, 1)
-    test_batches = minibatch(a, batch_size=2, seq_length=3)
-    print(test_batches)
-    print(f"vocab size = {vocab_size}")
+    PATH = 'data/small_test_corpora'
+    TOPIC = 'nyt_covid'
+
+    """
+    # start training loop
+    for epoch in range(epochs):
+        for step, (x, y) in enumerate(test_loader):  # gives batch data
+            print(x, y)
+            # print(ass)
+        pass
+    """
+
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))
