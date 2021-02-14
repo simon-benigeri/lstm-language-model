@@ -6,6 +6,7 @@ import numpy as np
 import nltk
 import torch
 from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader
 
 def _load_text_data(path: str) -> str:
     """
@@ -117,14 +118,32 @@ if __name__=='__main__':
     start_time = time.time()
     # PATH = 'data/test_corpora'
     PATH = 'data/test_corpora'
-    topic = 'nyt_covid'
-    # train, valid, test, vocab_size = init_corpus(PATH, topic, 3)
-    a = np.array(list(range(21)))
-    dataset = generate_datasets(data=a, time_steps=5)
-    # print(dataset)
-    """
-    
-    print(f"vocab size = {vocab_size}")
+    TOPIC = 'nyt_covid'
+    batch_size = 1
+    time_steps = 20
+    freq_threshold = 3
+    epochs = 1
+    train, valid, test, vocab_size = init_corpus(PATH, TOPIC, freq_threshold)
+
+    datasets = {
+        'train': generate_datasets(data=train, time_steps=time_steps),
+        'valid': generate_datasets(data=valid, time_steps=time_steps),
+        'test': generate_datasets(data=test, time_steps=time_steps)
+    }
+
+    # dataset is List[Tup(input_seq: torch.tensor, target: torch.tensor)]
+    train_loader = DataLoader(dataset=datasets['train'], batch_size=batch_size, shuffle=True)
+    valid_loader = DataLoader(dataset=datasets['valid'], batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(dataset=datasets['test'], batch_size=batch_size, shuffle=True)
+
+    # start training loop
+    # TODO: MAKE SURE WE ARE FEEDING DATALOADER THE RIGHT THING AND THAT WE KNOW HOW TO ITERATE OVER IT FOR THE TRAIN LOOP
+    # test on jupyter notebook
+    for epoch in range(epochs):
+        for step, (x, y) in enumerate(test_loader):  # gives batch data
+            print(x, y)
+            # print(ass)
+        pass
+
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))
-    """
