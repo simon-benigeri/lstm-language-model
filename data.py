@@ -144,7 +144,14 @@ def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> D
 
 
 def init_datasets(path: str, topic:str, freq_threshold:int, time_steps:int, batch_size:int) -> Dict:
-
+    """
+    :param path: path to data files: [topic].train.txt
+    :param topic: [topic].train.txt, where topic can be wikitext, or nyt_covid
+    :param freq_threshold: hyperparam, words in training set with freq < threshold are replaced by '<unk>'
+    :param time_steps: hyperparam, number of time steps and therefore seq_length for bptt
+    :param batch_size: hyperparam, batch size
+    :return: datasets dict
+    """
     train, valid, test, word2index = _init_corpora(path=path, topic=topic, freq_threshold=freq_threshold)
 
     datasets = {
