@@ -57,7 +57,7 @@ def _apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
 
 
 def _init_corpora(path:str, topic:str, freq_threshold:int
-                  ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int, Dict[str, int]]:
+                  ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, int]]:
     """
     :param path:
     :param topic:
@@ -87,7 +87,7 @@ def _init_corpora(path:str, topic:str, freq_threshold:int
 
     # return list of len n to (n, 1) matrix
     # return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
-    return np.array(train), np.array(valid), np.array(test), len(words), word2index
+    return np.array(train), np.array(valid), np.array(test), word2index
 
 
 def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[Tuple]:
@@ -145,7 +145,7 @@ def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> D
 
 def init_datasets(path: str, topic:str, freq_threshold:int, time_steps:int, batch_size:int) -> Dict:
 
-    train, valid, test, vocab_size, word2index = _init_corpora(path=path, topic=topic, freq_threshold=freq_threshold)
+    train, valid, test, word2index = _init_corpora(path=path, topic=topic, freq_threshold=freq_threshold)
 
     datasets = {
         'data_loaders': {
@@ -153,8 +153,8 @@ def init_datasets(path: str, topic:str, freq_threshold:int, time_steps:int, batc
             'valid': _intlist_to_dataloader(data=valid, time_steps=time_steps, batch_size=batch_size),
             'test': _intlist_to_dataloader(data=test, time_steps=time_steps, batch_size=batch_size)
         },
-        'vocab_size': vocab_size,
-        'word2index': word2index
+        'word2index': word2index,
+        'vocab_size': len(word2index)
     }
 
     return datasets
