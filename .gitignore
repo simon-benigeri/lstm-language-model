@@ -1,3 +1,5 @@
 data
 obsolete
 .DS_Store
+.idea/
+*.zip
