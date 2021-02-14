@@ -83,15 +83,33 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
     test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
 
     # return list of len n to (n, 1) matrix
-    return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
+    return np.array(train), np.array(valid), np.array(test), len(words)
+
+def generate_sequences_of_size_timestep(data, timestep_size):
+    # TODO: IMPLEMENT
+    pass
+
+def pad_sequences(word_id_sequences):
+    tensors = [torch.tensor(word_id).type(torch.int64) for word_id in word_id_sequences]
+    # we pad_sequences these sequences
+    padded_tensors = pad_sequence(tensors, batch_first=True, padding_value=0)
+    return padded_tensors
+
+def generate_inputs_and_targets(padded_tensors):
+    input_sequences = padded_tensors.narrow_copy(1, 0, padded_tensors.shape[1] - 1)
+    target_sequences = padded_tensors.narrow_copy(1, 1, padded_tensors.shape[1] - 1)
+    return input_sequences, target_sequences
+
+def create_seq_to_seq_data(sequences):
+    return generate_inputs_and_targets(pad_sequences(sequences))
 
 
-def minibatch(data, batch_size, seq_length):
+def minibatch(data, batch_size, timestep_size):
     """
 
     :param data: n, 1 matrix
     :param batch_size: how many samples per batch
-    :param seq_length: timestep length
+    :param timestep_size: timestep length
     :return:
     """
     # (n, 1) tensor
@@ -102,17 +120,17 @@ def minibatch(data, batch_size, seq_length):
     data = data[:num_batches * batch_size]
     # reshape into (m, n)
     data = data.view(batch_size, -1)
-
+    dataset = []
     # for i in range 0, num_batches - 1, increment by seq_length
-    for i in range(0, data.size(1)-1, seq_length):
+    for i in range(0, data.size(1)-1, timestep_size):
+        sequence_length = int(np.min([timestep_size, data.size(1)-1-i]))
 
-        seqlen=int(np.min([seq_length,data.size(1)-1-i]))
+        if sequence_length <data.size(1)-1-i:
 
-        if seqlen<data.size(1)-1-i:
-            x=data[:,i:i+seqlen].transpose(1, 0)
-            y=data[:,i+1:i+seqlen+1].transpose(1, 0)
+            x = data[:,i:i+sequence_length ].transpose(1, 0)
+            y = data[:,i+1:i+sequence_length +1].transpose(1, 0)
             dataset.append((x, y))
-
+    print(dataset)
     return dataset
 
 
@@ -121,11 +139,17 @@ if __name__=='__main__':
     # PATH = 'data/test_corpora'
     PATH = 'data/test_corpora'
     topic = 'nyt_covid'
-    train, valid, test, vocab_size = init_corpus(PATH, topic, 3)
-    print(test)
-    a = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).reshape(-1, 1)
-    test_batches = minibatch(a, batch_size=2, seq_length=3)
+    # train, valid, test, vocab_size = init_corpus(PATH, topic, 3)
+    # print(test)
+    k = (list(range(41)))
+    a = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]).reshape(-1, 1)
+    b = np.array(list(range(41))).reshape(-1, 1)
+    # test_batches = minibatch(a, batch_size=3, timestep_size=2)
+    test_batches = minibatch(b, batch_size=20, timestep_size=5)
     print(test_batches)
+    """
+    
     print(f"vocab size = {vocab_size}")
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))
+    """
