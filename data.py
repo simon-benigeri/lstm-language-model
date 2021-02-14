@@ -5,6 +5,7 @@ from typing import List, Dict, Tuple
 import numpy as np
 import nltk
 import torch
+from torch.nn.utils.rnn import pad_sequence
 
 def _load_text_data(path: str) -> str:
     """
@@ -75,6 +76,7 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
     train = apply_freq_threshold(words=train, threshold=frequency_threshold)
     # create vocabulary: set of words in train and word to index mapping
     words = sorted(set(train))
+    words.insert(0, '<pad>')
     word2index = {word: index for index, word in enumerate(words)}
 
     # convert each word to a list of integers. if word is not in vocab, we use unk
@@ -83,54 +85,31 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
     test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
 
     # return list of len n to (n, 1) matrix
+    # return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
     return np.array(train), np.array(valid), np.array(test), len(words)
 
-def generate_sequences_of_size_timestep(data, timestep_size):
-    # TODO: IMPLEMENT
-    pass
 
-def pad_sequences(word_id_sequences):
-    tensors = [torch.tensor(word_id).type(torch.int64) for word_id in word_id_sequences]
-    # we pad_sequences these sequences
-    padded_tensors = pad_sequence(tensors, batch_first=True, padding_value=0)
-    return padded_tensors
-
-def generate_inputs_and_targets(padded_tensors):
-    input_sequences = padded_tensors.narrow_copy(1, 0, padded_tensors.shape[1] - 1)
-    target_sequences = padded_tensors.narrow_copy(1, 1, padded_tensors.shape[1] - 1)
-    return input_sequences, target_sequences
-
-def create_seq_to_seq_data(sequences):
-    return generate_inputs_and_targets(pad_sequences(sequences))
-
-
-def minibatch(data, batch_size, timestep_size):
+def generate_datasets(data:np.ndarray, time_steps:int) -> List[Tuple]:
     """
-
-    :param data: n, 1 matrix
-    :param batch_size: how many samples per batch
-    :param timestep_size: timestep length
+    :param data: sequence of integer representation of words
+    :param time_steps: number of time steps in LSTM cell
     :return:
     """
-    # (n, 1) tensor
     data = torch.tensor(data, dtype=torch.int64)
-    # number of batches m is n // batch_size
-    num_batches = data.size(0) // batch_size
-    # cut off data that doesn't fit into equally sized batches
-    data = data[:num_batches * batch_size]
-    # reshape into (m, n)
-    data = data.view(batch_size, -1)
-    dataset = []
-    # for i in range 0, num_batches - 1, increment by seq_length
-    for i in range(0, data.size(1)-1, timestep_size):
-        sequence_length = int(np.min([timestep_size, data.size(1)-1-i]))
+    # split tensor into tensors of of size time_steps
+    data = torch.split(tensor=data, split_size_or_sections=time_steps)
 
-        if sequence_length <data.size(1)-1-i:
+    # note: word2index['<pad>'] = 0
+    sequences = pad_sequence(data, batch_first=True, padding_value=0)
 
-            x = data[:,i:i+sequence_length ].transpose(1, 0)
-            y = data[:,i+1:i+sequence_length +1].transpose(1, 0)
-            dataset.append((x, y))
-    print(dataset)
+    # from seq we generate 2 copies.
+    # inputs=seq[:-1], targets=seq[1:]
+    sequences_input = sequences.narrow_copy(1, 0, sequences.shape[1] - 1)
+    sequences_target = sequences.narrow_copy(1, 1, sequences.shape[1] - 1)
+
+    # dataset is a list of tuples to pair each input with its respective target
+    dataset = [(X, y) for X, y in zip(sequences_input, sequences_target)]
+
     return dataset
 
 
@@ -140,13 +119,9 @@ if __name__=='__main__':
     PATH = 'data/test_corpora'
     topic = 'nyt_covid'
     # train, valid, test, vocab_size = init_corpus(PATH, topic, 3)
-    # print(test)
-    k = (list(range(41)))
-    a = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]).reshape(-1, 1)
-    b = np.array(list(range(41))).reshape(-1, 1)
-    # test_batches = minibatch(a, batch_size=3, timestep_size=2)
-    test_batches = minibatch(b, batch_size=20, timestep_size=5)
-    print(test_batches)
+    a = np.array(list(range(21)))
+    dataset = generate_datasets(data=a, time_steps=5)
+    # print(dataset)
     """
     
     print(f"vocab size = {vocab_size}")
