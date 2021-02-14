@@ -6,7 +6,8 @@ import numpy as np
 import nltk
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
+
 
 def _load_text_data(path: str) -> str:
     """
@@ -16,7 +17,6 @@ def _load_text_data(path: str) -> str:
     """
     with open(path, 'r') as f:
         text = f.read() #f.readlines()
-
     return text
 
 
@@ -33,7 +33,7 @@ def _tokenize(text: str) -> List[str]:
     return words
 
 
-def apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
+def _apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
     """
     :param words: list of tokens
     :param threshold: frequency threshold
@@ -56,9 +56,9 @@ def apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
     return filtered_words
 
 
-def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+def _init_corpora(path:str, topic:str, freq_threshold:int
+                  ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int, Dict[str, int]]:
     """
-
     :param path:
     :param topic:
     :return:
@@ -74,7 +74,7 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
     test = _tokenize(text=test)
 
     # apply frequency threshold to training set
-    train = apply_freq_threshold(words=train, threshold=frequency_threshold)
+    train = _apply_freq_threshold(words=train, threshold=freq_threshold)
     # create vocabulary: set of words in train and word to index mapping
     words = sorted(set(train))
     words.insert(0, '<pad>')
@@ -87,10 +87,10 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
 
     # return list of len n to (n, 1) matrix
     # return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
-    return np.array(train), np.array(valid), np.array(test), len(words)
+    return np.array(train), np.array(valid), np.array(test), len(words), word2index
 
 
-def generate_datasets(data:np.ndarray, time_steps:int) -> List[Tuple]:
+def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[Tuple]:
     """
     :param data: sequence of integer representation of words
     :param time_steps: number of time steps in LSTM cell
@@ -105,45 +105,75 @@ def generate_datasets(data:np.ndarray, time_steps:int) -> List[Tuple]:
 
     # from seq we generate 2 copies.
     # inputs=seq[:-1], targets=seq[1:]
-    sequences_input = sequences.narrow_copy(1, 0, sequences.shape[1] - 1)
-    sequences_target = sequences.narrow_copy(1, 1, sequences.shape[1] - 1)
+    sequences_inputs = sequences.narrow_copy(1, 0, sequences.shape[1] - 1)
+    sequences_targets = sequences.narrow_copy(1, 1, sequences.shape[1] - 1)
 
-    # dataset is a list of tuples to pair each input with its respective target
-    dataset = [(X, y) for X, y in zip(sequences_input, sequences_target)]
+    return (sequences_inputs, sequences_targets)
 
-    return dataset
+
+class Sequence_Data(Dataset):
+    def __init__(self, x:torch.tensor, y:torch.tensor):
+        self.x = x
+        self.y = y
+        self.len = x.shape[0]
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx]
+
+    def __len__(self):
+        return self.len
+
+
+def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> DataLoader:
+    """
+    :param data: input list of integers
+    :param batch_size: hyper parameter, for minibatch size
+    :param time_steps: hyper parameter for sequence length for bptt
+    :return: DataLoader for SGD
+    """
+    # given int list, generate input and output sequences of length = time_steps
+    inputs, targets = _generate_io_sequences(data=data, time_steps=time_steps)
+
+    # create Dataset object
+    dataset = Sequence_Data(x=inputs, y=targets)
+
+    # create dataloader
+    data_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
+
+    return data_loader
+
+
+def init_datasets(path: str, topic:str, freq_threshold:int, time_steps:int, batch_size:int) -> Dict:
+
+    train, valid, test, vocab_size, word2index = _init_corpora(path=path, topic=topic, freq_threshold=freq_threshold)
+
+    datasets = {
+        'data_loaders': {
+            'train': _intlist_to_dataloader(data=train, time_steps=time_steps, batch_size=batch_size),
+            'valid': _intlist_to_dataloader(data=valid, time_steps=time_steps, batch_size=batch_size),
+            'test': _intlist_to_dataloader(data=test, time_steps=time_steps, batch_size=batch_size)
+        },
+        'vocab_size': vocab_size,
+        'word2index': word2index
+    }
+
+    return datasets
 
 
 if __name__=='__main__':
     start_time = time.time()
     # PATH = 'data/test_corpora'
-    PATH = 'data/test_corpora'
+    PATH = 'data/small_test_corpora'
     TOPIC = 'nyt_covid'
-    batch_size = 2
-    time_steps = 20
-    freq_threshold = 3
-    epochs = 1
-    train, valid, test, vocab_size = init_corpus(PATH, TOPIC, freq_threshold)
 
-    datasets = {
-        'train': generate_datasets(data=train, time_steps=time_steps),
-        'valid': generate_datasets(data=valid, time_steps=time_steps),
-        'test': generate_datasets(data=test, time_steps=time_steps)
-    }
-
-    # dataset is List[Tup(input_seq: torch.tensor, target: torch.tensor)]
-    train_loader = DataLoader(dataset=datasets['train'], batch_size=batch_size, shuffle=True)
-    valid_loader = DataLoader(dataset=datasets['valid'], batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(dataset=datasets['test'], batch_size=batch_size, shuffle=True)
-
+    """
     # start training loop
-    # TODO: MAKE SURE WE ARE FEEDING DATALOADER THE RIGHT THING AND THAT WE KNOW HOW TO ITERATE OVER IT FOR THE TRAIN LOOP
-    # test on jupyter notebook
     for epoch in range(epochs):
         for step, (x, y) in enumerate(test_loader):  # gives batch data
             print(x, y)
             # print(ass)
         pass
+    """
 
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))
