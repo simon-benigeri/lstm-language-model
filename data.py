@@ -82,21 +82,37 @@ def init_corpus(path:str, topic:str, frequency_threshold:int) -> Tuple[np.ndarra
     valid = [word2index[word] if word in word2index else word2index['<unk>'] for word in valid]
     test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
 
+    # return list of len n to (n, 1) matrix
     return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
 
-#Batches the data with [T, B] dimensionality.
+
 def minibatch(data, batch_size, seq_length):
-    data = torch.tensor(data, dtype = torch.int64)
-    num_batches = data.size(0)//batch_size
-    data = data[:num_batches*batch_size]
-    data=data.view(batch_size,-1)
-    dataset = []
-    for i in range(0,data.size(1)-1,seq_length):
+    """
+
+    :param data: n, 1 matrix
+    :param batch_size: how many samples per batch
+    :param seq_length: timestep length
+    :return:
+    """
+    # (n, 1) tensor
+    data = torch.tensor(data, dtype=torch.int64)
+    # number of batches m is n // batch_size
+    num_batches = data.size(0) // batch_size
+    # cut off data that doesn't fit into equally sized batches
+    data = data[:num_batches * batch_size]
+    # reshape into (m, n)
+    data = data.view(batch_size, -1)
+
+    # for i in range 0, num_batches - 1, increment by seq_length
+    for i in range(0, data.size(1)-1, seq_length):
+
         seqlen=int(np.min([seq_length,data.size(1)-1-i]))
+
         if seqlen<data.size(1)-1-i:
             x=data[:,i:i+seqlen].transpose(1, 0)
             y=data[:,i+1:i+seqlen+1].transpose(1, 0)
             dataset.append((x, y))
+
     return dataset
 
 
@@ -107,7 +123,7 @@ if __name__=='__main__':
     topic = 'nyt_covid'
     train, valid, test, vocab_size = init_corpus(PATH, topic, 3)
     print(test)
-    a = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8]).reshape(-1, 1)
+    a = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).reshape(-1, 1)
     test_batches = minibatch(a, batch_size=2, seq_length=3)
     print(test_batches)
     print(f"vocab size = {vocab_size}")
