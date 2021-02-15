@@ -4,7 +4,7 @@ import torch.nn as nn
 import math
 
 class Model(nn.Module):
-    def __init__(self, vocab_size, hidden_size, layer_num, dropout, init_param):
+    def __init__(self, vocab_size, time_steps, embedding_dims, layer_num, dropout, init_param):
         """
         Initialization for the model.
         Args:
@@ -16,14 +16,14 @@ class Model(nn.Module):
         """
         super().__init__()
         self.vocab_size = vocab_size
-        self.hidden_size = hidden_size
+        self.hidden_size = time_steps
         self.layer_num = layer_num
         self.init_param = init_param
         self.dropout = nn.Dropout(p=dropout)
-        self.embed = nn.Embedding(vocab_size, hidden_size)
-        self.rnns = [nn.LSTM(hidden_size, hidden_size) for i in range(layer_num)]
+        self.embed = nn.Embedding(vocab_size, embedding_dims)
+        self.rnns = [nn.LSTM(self.hidden_size, self.hidden_size) for i in range(layer_num)]
         self.rnns = nn.ModuleList(self.rnns)
-        self.fc = nn.Linear(hidden_size, vocab_size)
+        self.fc = nn.Linear(self.hidden_size, vocab_size)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -57,5 +57,5 @@ if __name__ == "__main__":
     data_loaders = datasets['data_loaders']
     vocab_size = datasets['vocab_size']
     hidden_size = math.ceil(math.sqrt(math.sqrt(datasets['vocab_size'])))
-    model = Model(vocab_size, hidden_size, layer_num=2, dropout=0.1, init_param=0.1)
+    model = Model(vocab_size, time_steps=5, embedding_dims=100, layer_num=2, dropout=0.1, init_param=0.1)
     print(model.__dict__)

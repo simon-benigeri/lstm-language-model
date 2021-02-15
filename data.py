@@ -180,6 +180,11 @@ if __name__=='__main__':
     path = 'data/small_test_corpora'
     topic = 'nyt_covid'
 
+    data = np.array(list(range(1,11)))
+    seqs = _generate_io_sequences(data, time_steps=5)
+    print(seqs)
+
+
     """
     # start training loop
     for epoch in range(epochs):
