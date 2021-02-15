@@ -103,10 +103,11 @@ def main():
         'save_model': True,
         'load_model': True,
         'model_path': 'lstm_model',
-        'topic': 'wiki' # enter 'wiki' or 'nyt_covid'
+        'topic': 'wiki', # enter 'wiki' or 'nyt_covid'
+        'path': 'data/small_test_corpora'
     }
 
-    data_params = {k:hyperparams for k in ['topic', 'freq_threshold', 'time_steps', 'batch_size']}
+    data_params = {k:hyperparams for k in ['topic', 'path', 'freq_threshold', 'time_steps', 'batch_size']}
     datasets = init_datasets(**data_params)
 
     model_params = ['embed_dims', 'dropout_prob', 'init_range', 'num_layers', 'step_size', 'max_grad', 'embed_tying', 'bias']
