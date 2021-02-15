@@ -111,6 +111,15 @@ def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[T
 
     return (sequences_inputs, sequences_targets)
 
+def _generate_io_sequences_2(data:np.ndarray, time_steps:int) -> Tuple[np.ndarray, np.ndarray]:
+    inputs = data
+    targets = data[1:] + [0]
+
+    for index in range(len(inputs)):
+        pass
+
+    return inputs, targets
+
 
 class Sequence_Data(Dataset):
     def __init__(self, x:torch.tensor, y:torch.tensor):
@@ -168,8 +177,8 @@ def init_datasets(topic:str, freq_threshold:int, time_steps:int, batch_size:int,
 if __name__=='__main__':
     start_time = time.time()
     # PATH = 'data/test_corpora'
-    PATH = 'data/small_test_corpora'
-    TOPIC = 'nyt_covid'
+    path = 'data/small_test_corpora'
+    topic = 'nyt_covid'
 
     """
     # start training loop
