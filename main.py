@@ -1,4 +1,4 @@
-from lstm import Model
+from lstm import LSTM_Model
 from data import init_datasets
 import numpy as np
 import torch
@@ -33,7 +33,7 @@ def neg_log_likelihood_loss(scores, y):
 def get_perplexity(data, model, batch_size):
     with torch.no_grad():
         losses = []
-        states = model.state_init(batch_size)
+        states = model._init_state(batch_size)
         for x, y in data:
             scores, states = model(x, states)
             loss = neg_log_likelihood_loss(scores, y)
@@ -52,7 +52,7 @@ def train(model, data, epochs, learning_rate, learning_rate_decay, max_grad):
         model.train()
 
         batch_size = train_data.batch_size
-        states = model.state_init(batch_size)
+        states = model._init_state(batch_size)
 
         if epoch > 5:
             learning_rate = learning_rate / learning_rate_decay
@@ -60,7 +60,7 @@ def train(model, data, epochs, learning_rate, learning_rate_decay, max_grad):
         for i, (x, y) in enumerate(train_data):
             batch_size = len(x)
             model.zero_grad()
-            states = model.detach(states)
+            states = model._detach(states)
             scores, states = model(x, states)
             loss = neg_log_likelihood_loss(scores, y)
             loss.backward()
@@ -111,7 +111,7 @@ def main():
 
     model_params = ['embed_dims', 'dropout_prob', 'init_range', 'num_layers', 'step_size', 'max_grad', 'embed_tying', 'bias']
     model_params = {k:hyperparams[k] for k in model_params}
-    model = Model(**model_params)
+    model = LSTM_Model(**model_params)
 
     if hyperparams['load_model']:
         model.load_state_dict(torch.load(hyperparams['model_path']))

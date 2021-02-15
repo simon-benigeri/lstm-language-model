@@ -3,59 +3,67 @@ import torch
 import torch.nn as nn
 import math
 
-class Model(nn.Module):
-    def __init__(self, vocab_size, time_steps, embedding_dims, layer_num, dropout, init_param):
+# model_params = ['embed_dims', 'dropout_prob', 'init_range', 'num_layers', 'max_grad', 'embed_tying', 'bias']
+class LSTM_Model(nn.Module):
+    def __init__(self, vocab_size:int, max_grad:float, embed_dims:int, num_layers:int,
+                 dropout_prob:float, init_param:float, bias:bool, embed_tying:bool) :
         """
-        Initialization for the model.
-        Args:
-            vocab_size: Nuber of unique tokens in the dataset
-            hidden_size: Embedding dimensions. (the 4th root thing)
-            layer_num: Number of lstm layers. For stacked LSTM
-            init_param: setting initial parameters
-            dropout: probability for dropping a node in network
+        :param vocab_size:
+        :param max_grad:
+        :param embed_dims:
+        :param num_layers:
+        :param dropout_prob:
+        :param init_param:
+        :param bias:
+        :param embed_tying:
         """
         super().__init__()
-        self.vocab_size = vocab_size
-        self.hidden_size = time_steps
-        self.layer_num = layer_num
+        self.max_grad = max_grad
         self.init_param = init_param
-        self.dropout = nn.Dropout(p=dropout)
-        self.embed = nn.Embedding(vocab_size, embedding_dims)
-        self.rnns = [nn.LSTM(self.hidden_size, self.hidden_size) for i in range(layer_num)]
-        self.rnns = nn.ModuleList(self.rnns)
-        self.fc = nn.Linear(self.hidden_size, vocab_size)
-        self.reset_parameters()
+        self.bias = bias
+        self.embed_tying = embed_tying
 
-    def reset_parameters(self):
+        # model architecture
+        self.vocab_size = vocab_size
+        self.dropout = nn.Dropout(p=dropout_prob)
+        self.embed = nn.Embedding(vocab_size, embed_dims)
+        self.lstms = [nn.LSTM(embed_dims, embed_dims) for _ in range(num_layers)]
+        self.lstms = nn.ModuleList(self.lstms)
+        self.fc = nn.Linear(embed_dims, vocab_size)
+
+        self._reset_parameters()
+
+    # set intial parameters
+    def _reset_parameters(self):
         for param in self.parameters():
             nn.init.uniform_(param, -self.init_param, self.init_param)
 
-    def state_init(self, batch_size):
+    def _init_state(self, batch_size):
         dev = next(self.parameters()).device
         states = [
             (torch.zeros(1, batch_size, layer.hidden_size, device=dev),
              torch.zeros(1, batch_size, layer.hidden_size, device=dev))
-                  for layer in self.rnns
+                  for layer in self.lstms
         ]
         return states
 
-    def detach(self, states):
-        return [(h.detach(), c.detach()) for (h, c) in states]
+    def _detach(self, states):
+        return [(h._detach(), c._detach()) for (h, c) in states]
 
-    def forward(self, x, states):
+    def _forward(self, x, states):
         x = self.embed(x)
         x = self.dropout(x)
-        for i, rnn in enumerate(self.rnns):
-            x, states[i] = rnn(x, states[i])
+        for i, lstm in enumerate(self.lstms):
+            x, states[i] = lstm(x, states[i])
             x = self.dropout(x)
         scores = self.fc(x)
         return scores, states
 
 if __name__ == "__main__":
-    print('hello darkness my old friend')
-    datasets = init_datasets(topic='nyt_covid', freq_threshold=0, time_steps=5, batch_size=10)
+    datasets = init_datasets(topic='nyt_covid', freq_threshold=2, time_steps=35, batch_size=20)
     data_loaders = datasets['data_loaders']
     vocab_size = datasets['vocab_size']
     hidden_size = math.ceil(math.sqrt(math.sqrt(datasets['vocab_size'])))
-    model = Model(vocab_size, time_steps=5, embedding_dims=100, layer_num=2, dropout=0.1, init_param=0.1)
+    model = LSTM_Model(vocab_size=1000, max_grad=5, embed_dims=200, num_layers=2,
+                       dropout_prob=0.5, init_param=0.05, bias=False, embed_tying=False)
     print(model.__dict__)

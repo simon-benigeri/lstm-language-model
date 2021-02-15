@@ -97,7 +97,7 @@ def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[T
     :param time_steps: number of time steps in LSTM cell
     :return:
     """
-    data = torch.tensor(data, dtype=torch.int64)
+    data = torch.LongTensor(data)
     # split tensor into tensors of of size time_steps
     data = torch.split(tensor=data, split_size_or_sections=time_steps)
 
@@ -122,7 +122,7 @@ def _generate_io_sequences_2(data:np.ndarray, time_steps:int) -> Tuple[np.ndarra
 
 
 class Sequence_Data(Dataset):
-    def __init__(self, x:torch.tensor, y:torch.tensor):
+    def __init__(self, x:torch.LongTensor, y:torch.LongTensor):
         self.x = x
         self.y = y
         self.len = x.shape[0]
