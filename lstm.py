@@ -21,16 +21,15 @@ class LSTM_Model(nn.Module):
         self.init_param = init_param
         self.bias = bias
         self.embed_tying = embed_tying
-        self.embed_dims = embed_dims if embed_dims else np.ceil(np.sqrt(np.sqrt(vocab_size)))
         # model architecture
         self.vocab_size = vocab_size
         self.dropout = nn.Dropout(p=dropout_prob)
-        self.embed = nn.Embedding(num_embeddings=vocab_size, embedding_dim=self.embed_dims)
-        self.lstm_modules = [nn.LSTM(input_size=self.embed_dims, hidden_size=self.embed_dims, bias=bias)
+        self.embed = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embed_dims)
+        self.lstm_modules = [nn.LSTM(input_size=embed_dims, hidden_size=embed_dims, bias=bias)
                              for _ in range(num_layers)
                              ]
         self.lstm_modules = nn.ModuleList(modules=self.lstm_modules)
-        self.fc = nn.Linear(in_features=self.embed_dims, out_features=vocab_size, bias=bias)
+        self.fc = nn.Linear(in_features=embed_dims, out_features=vocab_size, bias=bias)
 
         self._reset_parameters()
 
@@ -61,10 +60,10 @@ class LSTM_Model(nn.Module):
         return scores, states
 
 if __name__ == "__main__":
-    datasets = init_datasets(topic='nyt_covid', freq_threshold=2, time_steps=35, batch_size=20)
+    datasets = init_datasets(topic='nyt_covid', freq_threshold=2, time_steps=10, batch_size=20)
     data_loaders = datasets['data_loaders']
     vocab_size = datasets['vocab_size']
-    embed_dims = np.ceil(np.sqrt(np.sqrt(datasets['vocab_size'])))
+    embed_dims = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
     model = LSTM_Model(vocab_size=vocab_size, max_grad=5, embed_dims=embed_dims, num_layers=2,
                        dropout_prob=0.5, init_param=0.05, bias=False, embed_tying=False)
-    print(model._modules)
+    # print(model._modules)
