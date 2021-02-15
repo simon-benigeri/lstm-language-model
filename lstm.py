@@ -1,4 +1,5 @@
 from data import init_datasets
+import time
 import numpy as np
 import torch
 import torch.nn as nn
@@ -60,10 +61,15 @@ class LSTM_Model(nn.Module):
         return scores, states
 
 if __name__ == "__main__":
-    datasets = init_datasets(topic='nyt_covid', freq_threshold=2, time_steps=10, batch_size=20)
+    start_time = time.time()
+
+    datasets = init_datasets(topic='wiki', freq_threshold=1, time_steps=10, batch_size=20, path='data/corpora')
     data_loaders = datasets['data_loaders']
     vocab_size = datasets['vocab_size']
     embed_dims = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
     model = LSTM_Model(vocab_size=vocab_size, max_grad=5, embed_dims=embed_dims, num_layers=2,
                        dropout_prob=0.5, init_param=0.05, bias=False, embed_tying=False)
     # print(model._modules)
+
+    execution_time = (time.time() - start_time)
+    print('Execution time in seconds: ' + str(execution_time))

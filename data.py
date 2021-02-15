@@ -41,9 +41,21 @@ def _tokenize(text: str) -> List[str]:
     """
     text = text.replace('<s>', '')
     text = text.replace('\n', ' ')
-    text = text.replace('  ', ' ')
+    text = ' '.join(text.split())
+    text = text.lower()
     words = text.strip().split(' ')
     return words
+
+
+def _remove_wikitags(wikitext:str) -> str:
+    """
+    wikitext files have tags = = STUF = =
+    :param wikitext:
+    :return: wikitext without the tags
+    """
+    wikitext = wikitext.replace('=', ' ')
+    wikitext = ' '.join(wikitext.split())
+    return wikitext
 
 
 def _apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
@@ -80,6 +92,11 @@ def _init_corpora(path:str, topic:str, freq_threshold:int
     train = _load_text_data(os.path.join(path, f"{topic}.train.txt"))
     valid = _load_text_data(os.path.join(path, f"{topic}.valid.txt"))
     test = _load_text_data(os.path.join(path, f"{topic}.test.txt"))
+
+    if topic == 'wiki':
+        train = _remove_wikitags(wikitext=train)
+        valid = _remove_wikitags(wikitext=valid)
+        test = _remove_wikitags(wikitext=test)
 
     # split into word/token
     train = _tokenize(text=train)
@@ -166,13 +183,9 @@ def init_datasets(topic:str, freq_threshold:int, time_steps:int, batch_size:int,
 
 if __name__=='__main__':
     start_time = time.time()
-    # PATH = 'data/test_corpora'
-    path = 'data/small_test_corpora'
-    topic = 'nyt_covid'
-
-    data = np.array(list(range(1,11)))
-    seqs = _generate_io_sequences(data, time_steps=5)
-    print(seqs)
+    # data = np.array(list(range(1,11)))
+    # seqs = _generate_io_sequences(data, time_steps=5)
+    # print(seqs)
 
 
     """
@@ -183,7 +196,5 @@ if __name__=='__main__':
             # print(ass)
         pass
     """
-
-
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))
