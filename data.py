@@ -8,6 +8,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 
+PATH = 'data/small_test_corpora'
 
 def _load_text_data(path: str) -> str:
     """
@@ -143,7 +144,7 @@ def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> D
     return data_loader
 
 
-def init_datasets(path: str, topic:str, freq_threshold:int, time_steps:int, batch_size:int) -> Dict:
+def init_datasets(topic:str, freq_threshold:int, time_steps:int, batch_size:int, path:str=PATH) -> Dict:
     """
     :param path: path to data files: [topic].train.txt
     :param topic: [topic].train.txt, where topic can be wikitext, or nyt_covid
@@ -153,17 +154,14 @@ def init_datasets(path: str, topic:str, freq_threshold:int, time_steps:int, batc
     :return: datasets dict
     """
     train, valid, test, word2index = _init_corpora(path=path, topic=topic, freq_threshold=freq_threshold)
-
+    train_loader = _intlist_to_dataloader(data=train, time_steps=time_steps, batch_size=batch_size)
+    valid_loader = _intlist_to_dataloader(data=valid, time_steps=time_steps, batch_size=batch_size)
+    test_loader = _intlist_to_dataloader(data=test, time_steps=time_steps, batch_size=batch_size)
     datasets = {
-        'data_loaders': {
-            'train': _intlist_to_dataloader(data=train, time_steps=time_steps, batch_size=batch_size),
-            'valid': _intlist_to_dataloader(data=valid, time_steps=time_steps, batch_size=batch_size),
-            'test': _intlist_to_dataloader(data=test, time_steps=time_steps, batch_size=batch_size)
-        },
+        'data_loaders': (train_loader, valid_loader, test_loader),
         'word2index': word2index,
         'vocab_size': len(word2index)
     }
-
     return datasets
 
 

@@ -1,5 +1,5 @@
 from lstm import Model
-from data import get_data
+from data import init_datasets
 import torch
 import torch.nn as nn
 import torch.nn.utils.clip_grad_norm_ as grad_clip
@@ -73,17 +73,18 @@ def main():
         'learning_rate_decay': 1.2,
         'num_layers': 2,
         'batch_size': 20,
-        'timesteps': 35,
+        'time_steps': 35,
         'max_grad': 5,
         'embed_tying': False,
         'bias': False,
         'save_model': True,
         'load_model': True,
-        'model_path': 'lstm_model'
+        'model_path': 'lstm_model',
+        'topic': 'wiki' # enter 'wiki' or 'nyt_covid'
     }
 
-    data_params = {k:hyperparams for k in ['freq_threshold', 'timesteps', 'batch_size']}
-    datasets = get_data(**data_params)
+    data_params = {k:hyperparams for k in ['topic', 'freq_threshold', 'time_steps', 'batch_size']}
+    datasets = init_datasets(**data_params)
 
     model_params = ['embed_dims', 'dropout_prob', 'init_range', 'num_layers', 'step_size', 'max_grad', 'embed_tying', 'bias']
     model_params = {k:hyperparams[k] for k in model_params}
