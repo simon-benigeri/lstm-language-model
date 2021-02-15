@@ -1,8 +1,8 @@
 from lstm import Model
 from data import init_datasets
+import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.utils.clip_grad_norm_ as grad_clip
 import time
 
 # (i) embedding space dimensionality,
@@ -19,8 +19,27 @@ import time
 # (xii) a bias flag, and any others that you think may be necessary.
 
 
-def get_perplexity(model, dataset):
-    pass
+#The loss function.
+def neg_log_likelihood_loss(scores, y):
+    batch_size = y.size(1)
+    expscores = scores.exp()
+    probabilities = expscores / expscores.sum(1, keepdim = True)
+    answerprobs = probabilities[range(len(y.reshape(-1))), y.reshape(-1)]
+    #I multiply by batch_size as in the original paper
+    #Zaremba et al. sum the loss over batches but average these over time.
+    return torch.mean(-torch.log(answerprobs) * batch_size)
+
+
+def get_perplexity(data, model, batch_size):
+    with torch.no_grad():
+        losses = []
+        states = model.state_init(batch_size)
+        for x, y in data:
+            scores, states = model(x, states)
+            loss = neg_log_likelihood_loss(scores, y)
+            #Again with the sum/average implementation described in 'nll_loss'.
+            losses.append(loss.data.item() / batch_size)
+    return np.exp(np.mean(losses))
 
 
 def train(model, data, epochs, learning_rate, learning_rate_decay, max_grad):
@@ -32,6 +51,9 @@ def train(model, data, epochs, learning_rate, learning_rate_decay, max_grad):
     for epoch in range(epochs):
         model.train()
 
+        batch_size = train_data.batch_size
+        states = model.state_init(batch_size)
+
         if epoch > 5:
             learning_rate = learning_rate / learning_rate_decay
 
@@ -40,10 +62,10 @@ def train(model, data, epochs, learning_rate, learning_rate_decay, max_grad):
             model.zero_grad()
             states = model.detach(states)
             scores, states = model(x, states)
-            loss = nll_loss(scores, y)
+            loss = neg_log_likelihood_loss(scores, y)
             loss.backward()
             with torch.no_grad():
-                norm = grad_clip(model.parameters(), max_grad)
+                norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad)
                 for param in model.parameters():
                     param -= learning_rate * param.grad
             if i % (len(train_data) // 10) == 0:
@@ -55,12 +77,13 @@ def train(model, data, epochs, learning_rate, learning_rate_decay, max_grad):
                       "since beginning = {:d} mins, ".format(round((end_time-start_time)/60)) +
                       "cuda memory = {:.3f} GBs".format(torch.cuda.max_memory_allocated()/1024/1024/1024))
         model.eval()
-        valid_perplexity = get_perplexity(model, valid_data)
+        valid_perplexity = get_perplexity(model, valid_data, batch_size)
         print("Epoch : {:d} || Validation set perplexity : {:.3f}".format(epoch+1, valid_perplexity))
         print("*************************************************\n")
-    test_perp = get_perplexity(model, test_data)
+    test_perp = get_perplexity(model, test_data, batch_size)
     print("Test set perplexity : {:.3f}".format(test_perp))
     print("Training is over.")
+    return model
 
 def main():
     hyperparams = {
@@ -96,7 +119,12 @@ def main():
     else:
         training_params = ['epochs', 'learning_rate', 'learning_rate_decay', 'max_grad']
         training_params = {k:hyperparams[k] for k in training_params}
-        perplexities, model = train(model, datasets['data_loaders'], **training_params)
+        model = train(model, datasets['data_loaders'], **training_params)
+
+    # now calculate perplexities for train, valid, test
+    for d, l in zip(datasets, ['train', 'valid', 'test']):
+        perplexity = get_perplexity(d, model, d.batch_size)
+        print("perplexity on %s dataset: %.3f, " % (l, perplexity))
 
     if hyperparams['save_model']:
         torch.save(model.state_dict(), hyperparams['model_path'])
