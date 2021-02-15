@@ -10,6 +10,18 @@ from torch.utils.data import Dataset, DataLoader
 
 PATH = 'data/small_test_corpora'
 
+class Sequence_Data(Dataset):
+    def __init__(self, x:torch.LongTensor, y:torch.LongTensor):
+        self.x = x
+        self.y = y
+        self.len = x.shape[0]
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx]
+
+    def __len__(self):
+        return self.len
+
 def _load_text_data(path: str) -> str:
     """
     read text file
@@ -110,28 +122,6 @@ def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[T
     sequences_targets = sequences.narrow_copy(1, 1, sequences.shape[1] - 1)
 
     return (sequences_inputs, sequences_targets)
-
-def _generate_io_sequences_2(data:np.ndarray, time_steps:int) -> Tuple[np.ndarray, np.ndarray]:
-    inputs = data
-    targets = data[1:] + [0]
-
-    for index in range(len(inputs)):
-        pass
-
-    return inputs, targets
-
-
-class Sequence_Data(Dataset):
-    def __init__(self, x:torch.LongTensor, y:torch.LongTensor):
-        self.x = x
-        self.y = y
-        self.len = x.shape[0]
-
-    def __getitem__(self, idx):
-        return self.x[idx], self.y[idx]
-
-    def __len__(self):
-        return self.len
 
 
 def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> DataLoader:
