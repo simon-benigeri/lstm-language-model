@@ -129,7 +129,7 @@ def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
 
 def main():
     hyperparams = {
-        'embed_dims': None,
+        'embed_dims': 200,
         'device': 'cpu', # 'gpu'
         'freq_threshold': 3,
         'dropout_prob': 0.5,
@@ -169,7 +169,7 @@ def main():
     # Masum recommended this as embed dims
     # TODO: Make this more easily modifiable.
     #   Want to do embed dims = user input if input provied, else embed dims = line below
-    model_params['embed_dims'] = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
+    # model_params['embed_dims'] = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
     model = LSTM_Model(**model_params)
     print(f"vocab size : {vocab_size}")
     for d, l in zip(data_loaders, ['train', 'valid', 'test']):
