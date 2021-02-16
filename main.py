@@ -62,7 +62,6 @@ def get_perplexity(data, model, batch_size):
             # print(f"x size : {x.size()}")
             # print(f"y size : {y.size()}")
             scores, states = model(x, states)
-
             # print(f"scores size : {scores.size()}")
             loss = neg_log_likelihood_loss(scores, y)
 
@@ -89,10 +88,6 @@ def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
             learning_rate = learning_rate / learning_rate_decay
         
         for i, (x, y) in enumerate(train_loader):
-            # print(f"x size before : {x.size()}")
-            # x = torch.transpose(x, 0, 1)
-            # print(f"x size after : {x.size()}")
-            # y = torch.transpose(y, 0, 1)
             total_words += x.numel()
             model.zero_grad()
             
@@ -131,15 +126,15 @@ def main():
     hyperparams = {
         'embed_dims': 200,
         'device': 'cpu', # 'gpu'
-        'freq_threshold': 3,
+        'freq_threshold': 1,
         'dropout_prob': 0.5,
         'init_range': 0.05,
         'epochs': 10,
         'learning_rate': 1,
         'learning_rate_decay': 1.2,
         'num_layers': 2,
-        'batch_size': 3, #TODO: on nyt small dataset, we get issues with batch size and timesteps. Not sure why
-        'time_steps': 5,
+        'batch_size': 20, #TODO: on nyt small dataset, we get issues with batch size and timesteps. Not sure why
+        'time_steps': 30,
         'max_grad': 5,
         'embed_tying': False,
         'bias': False,
@@ -147,7 +142,7 @@ def main():
         'load_model': False,
         'model_path': 'lstm_model',
         'topic': 'nyt_covid', # enter 'wiki' or 'nyt_covid'
-        'path': 'data/small_test_corpora'
+        'path': 'data/test_corpora'
     }
 
     # set params for init_datasets
@@ -172,9 +167,14 @@ def main():
     # model_params['embed_dims'] = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
     model = LSTM_Model(**model_params)
     print(f"vocab size : {vocab_size}")
+    perplexity = get_perplexity(data=data_loaders[1], model=model, batch_size=data_loaders[1].batch_size)
+    print("perplexity on %s dataset before training: %.3f, " % ('valid', perplexity))
+    """
     for d, l in zip(data_loaders, ['train', 'valid', 'test']):
         perplexity = get_perplexity(data=d, model=model, batch_size=d.batch_size)
         print("perplexity on %s dataset before training: %.3f, " % (l, perplexity))
+    """
+
 
     if hyperparams['load_model']:
         model.load_state_dict(torch.load(hyperparams['model_path']))

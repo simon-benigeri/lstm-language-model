@@ -45,9 +45,10 @@ class LSTM_Model(nn.Module):
             nn.init.uniform_(param, -self.init_param, self.init_param)
 
     def init_state(self, batch_size):
+        dev = next(self.parameters()).device
         states = [
-            (torch.zeros(1, batch_size, layer.hidden_size, device=self.device),
-             torch.zeros(1, batch_size, layer.hidden_size, device=self.device))
+            (torch.zeros(1, batch_size, layer.hidden_size, device=dev),
+             torch.zeros(1, batch_size, layer.hidden_size, device=dev))
                   for layer in self.lstms
         ]
         return states
