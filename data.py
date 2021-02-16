@@ -81,7 +81,7 @@ def _apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
     return filtered_words
 
 
-def _init_corpora(path:str, topic:str, freq_threshold:int
+def _init_corpora(path:str, topic:str, freq_threshold:int,
                   ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, int]]:
     """
     :param path:
@@ -116,15 +116,15 @@ def _init_corpora(path:str, topic:str, freq_threshold:int
     test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
 
     # return list of len n to (n, 1) matrix
-    # return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), len(words)
-    return np.array(train), np.array(valid), np.array(test), word2index
+    # return np.array(train), np.array(valid), np.array(test), word2index
+    return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), word2index
 
 
 def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[Tuple]:
     """
     :param data: sequence of integer representation of words
     :param time_steps: number of time steps in LSTM cell
-    :return:
+    :return: Tuple of torch tensors of shape (n, time_steps, 1)
     """
     data = torch.LongTensor(data)
     # split tensor into tensors of of size time_steps
