@@ -6,27 +6,27 @@ import torch.nn as nn
 
 class LSTM_Model(nn.Module):
     def __init__(self, vocab_size:int, max_grad:float, embed_dims:int, num_layers:int,
-                 dropout_prob:float, init_param:float, bias:bool, embed_tying:bool):
+                 dropout_prob:float, init_range:float, bias:bool, embed_tying:bool):
         """
         :param vocab_size:
         :param max_grad:
         :param embed_dims:
         :param num_layers:
         :param dropout_prob:
-        :param init_param:
+        :param init_range:
         :param bias:
         :param embed_tying:
         """
         super().__init__()
         self.max_grad = max_grad
-        self.init_param = init_param
+        self.init_param = init_range
         self.bias = bias
         self.embed_tying = embed_tying
         # model architecture
         self.vocab_size = vocab_size
         self.dropout = nn.Dropout(p=dropout_prob)
         self.embed = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embed_dims)
-        self.lstm_modules = [nn.LSTM(input_size=embed_dims, hidden_size=embed_dims, bias=bias)
+        self.lstm_modules = [nn.LSTM(input_size=embed_dims, hidden_size=embed_dims, bias=bias, batch_first=True)
                              for _ in range(num_layers)
                              ]
         self.lstm_modules = nn.ModuleList(modules=self.lstm_modules)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     vocab_size = datasets['vocab_size']
     embed_dims = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
     model = LSTM_Model(vocab_size=vocab_size, max_grad=5, embed_dims=embed_dims, num_layers=2,
-                       dropout_prob=0.5, init_param=0.05, bias=False, embed_tying=False)
+                       dropout_prob=0.5, init_range=0.05, bias=False, embed_tying=False)
     # print(model._modules)
     """
     train_data, valid_data, test_data = data_loaders

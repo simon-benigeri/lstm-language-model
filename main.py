@@ -3,6 +3,7 @@ from data import init_datasets
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import time
 
 # (i) embedding space dimensionality,
@@ -44,8 +45,6 @@ def get_perplexity(model, data, batch_size):
         losses = []
         states = model.init_state(batch_size)
         for x, y in data:
-            x = torch.transpose(x, 0, 1)
-            y = torch.transpose(y, 0, 1)
             scores, states = model(x, states)
             loss = neg_log_likelihood_loss(scores, y)
             #Again with the sum/average implementation described in 'nll_loss'.
@@ -60,9 +59,10 @@ def train(model, data, epochs, learning_rate, learning_rate_decay, max_grad):
     
     total_words = 0
     print("Starting training.\n")
+    batch_size = train_loader.batch_size
     
     for epoch in range(epochs):
-        batch_size = train_loader.batch_size
+        # batch_size = train_loader.batch_size
         states = model.init_state(batch_size)
 
         if epoch > 5:
@@ -113,27 +113,30 @@ def main():
         'freq_threshold': 3,
         'dropout_prob': 0.5,
         'init_range': 0.05,
-        'epochs': 40,
+        'epochs': 5,
         'learning_rate': 1,
         'learning_rate_decay': 1.2,
         'num_layers': 2,
-        'batch_size': 20,
-        'time_steps': 35,
+        'batch_size': 3,
+        'time_steps': 5,
         'max_grad': 5,
         'embed_tying': False,
         'bias': False,
         'save_model': True,
-        'load_model': True,
+        'load_model': False,
         'model_path': 'lstm_model',
-        'topic': 'wiki', # enter 'wiki' or 'nyt_covid'
-        'path': 'data/corpora'
+        'topic': 'nyt_covid', # enter 'wiki' or 'nyt_covid'
+        'path': 'data/small_test_corpora'
     }
 
-    data_params = {k:hyperparams for k in ['topic', 'path', 'freq_threshold', 'time_steps', 'batch_size']}
+    data_params = {k:hyperparams[k] for k in ['topic','freq_threshold', 'time_steps', 'batch_size',  'path']}
+    print(data_params)
     datasets = init_datasets(**data_params)
-
-    model_params = ['embed_dims', 'dropout_prob', 'init_range', 'num_layers', 'step_size', 'max_grad', 'embed_tying', 'bias']
+    vocab_size = datasets['vocab_size']
+    model_params = ['embed_dims', 'dropout_prob', 'init_range', 'num_layers', 'max_grad', 'embed_tying', 'bias']
     model_params = {k:hyperparams[k] for k in model_params}
+    model_params['vocab_size'] = vocab_size
+    model_params['embed_dims'] = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
     model = LSTM_Model(**model_params)
 
     if hyperparams['load_model']:
@@ -145,9 +148,12 @@ def main():
         model = train(model, datasets['data_loaders'], **training_params)
 
     # now calculate perplexities for train, valid, test
-    for d, l in zip(datasets, ['train', 'valid', 'test']):
-        perplexity = get_perplexity(d, model, d.batch_size)
+    for d, l in zip(datasets['data_loaders'], ['train', 'valid', 'test']):
+        perplexity = get_perplexity(model=model, data=d, batch_size=d.batch_size)
         print("perplexity on %s dataset: %.3f, " % (l, perplexity))
 
     if hyperparams['save_model']:
         torch.save(model.state_dict(), hyperparams['model_path'])
+
+if __name__=='__main__':
+    main()
