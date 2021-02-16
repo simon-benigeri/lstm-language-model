@@ -62,14 +62,43 @@ class LSTM_Model(nn.Module):
 
 if __name__ == "__main__":
     start_time = time.time()
+    batch_size = 20
+    time_steps = 10
+    freq_threshold = 1
+    epochs = 2
 
-    datasets = init_datasets(topic='wiki', freq_threshold=1, time_steps=10, batch_size=20, path='data/corpora')
+
+    datasets = init_datasets(topic='wiki', freq_threshold=freq_threshold, time_steps=time_steps,
+                             batch_size=batch_size, path='data/corpora')
+
     data_loaders = datasets['data_loaders']
     vocab_size = datasets['vocab_size']
     embed_dims = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
     model = LSTM_Model(vocab_size=vocab_size, max_grad=5, embed_dims=embed_dims, num_layers=2,
                        dropout_prob=0.5, init_param=0.05, bias=False, embed_tying=False)
     # print(model._modules)
+    """
+    train_data, valid_data, test_data = data_loaders
+    train_data = train_data.values()
+    start__train_time = time.time()
+
+    print("Starting training.\n")
+
+    for epoch in range(epochs):
+        model.train()
+
+        batch_size = train_data.batch_size
+        states = model._init_state(batch_size)
+
+        for i, (x, y) in enumerate(train_data):
+            batch_size = len(x)
+            model.zero_grad()
+            states = model._detach(states)
+            scores, states = model(x, states)
+            print(x)
+            print(y)
+    """
+
 
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))
