@@ -115,31 +115,8 @@ def _init_corpora(path:str, topic:str, freq_threshold:int,
     valid = [word2index[word] if word in word2index else word2index['<unk>'] for word in valid]
     test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
 
-    # return list of len n to (n, 1) matrix
-    # return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), word2index
+    # return (n, ) arrays for train, valid, test, and the word2index dict
     return np.array(train), np.array(valid), np.array(test), word2index
-    # return np.array(train).T, np.array(valid).T, np.array(test).T, word2index
-
-
-def _old_generate_io_sequences(sequence:np.ndarray, time_steps:int) -> Tuple:# -> List[Tuple]:
-    """
-    :param sequence: sequence of integer representation of words
-    :param time_steps: number of time steps in LSTM cell
-    :return: Tuple of torch tensors of shape (n, time_steps, 1)
-    """
-    sequence = torch.LongTensor(sequence)
-    # split tensor into tensors of of size time_steps
-    sequence = torch.split(tensor=sequence, split_size_or_sections=time_steps)
-
-    # note: word2index['<pad>'] = 0
-    sequences = pad_sequence(sequence, batch_first=True, padding_value=0)
-
-    # from seq we generate 2 copies.
-    # inputs=seq[:-1], targets=seq[1:]
-    sequences_inputs = sequences.narrow_copy(1, 0, sequences.shape[1] - 1)
-    sequences_targets = sequences.narrow_copy(1, 1, sequences.shape[1] - 1)
-
-    return (sequences_inputs, sequences_targets)
 
 def _generate_io_sequences(sequence: np.ndarray, time_steps: int) -> Tuple:
     """
@@ -156,7 +133,7 @@ def _generate_io_sequences(sequence: np.ndarray, time_steps: int) -> Tuple:
     inputs = torch.split(tensor=inputs, split_size_or_sections=time_steps)
     targets = torch.split(tensor=targets, split_size_or_sections=time_steps)
 
-    # note: word2index['<pad>'] = 0
+    # recall: word2index['<pad>'] = 0
     inputs_padded = pad_sequence(inputs, batch_first=True, padding_value=0)
     targets_padded = pad_sequence(targets, batch_first=True, padding_value=0)
 
@@ -179,10 +156,8 @@ def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> D
     inputs = inputs[:num_batches*batch_size]
     targets = targets[:num_batches*batch_size]
     
-    # create Dataset object
+    # create Dataset object and from it create data loader
     dataset = Sequence_Data(x=inputs, y=targets)
-
-    # create dataloader
     data_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
 
     return data_loader
