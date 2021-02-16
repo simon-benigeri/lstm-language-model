@@ -116,8 +116,9 @@ def _init_corpora(path:str, topic:str, freq_threshold:int,
     test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
 
     # return list of len n to (n, 1) matrix
-    # return np.array(train), np.array(valid), np.array(test), word2index
-    return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), word2index
+    # return np.array(train).reshape(-1, 1), np.array(valid).reshape(-1, 1), np.array(test).reshape(-1, 1), word2index
+    return np.array(train), np.array(valid), np.array(test), word2index
+    # return np.array(train).T, np.array(valid).T, np.array(test).T, word2index
 
 
 def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[Tuple]:
@@ -150,7 +151,12 @@ def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> D
     """
     # given int list, generate input and output sequences of length = time_steps
     inputs, targets = _generate_io_sequences(data=data, time_steps=time_steps)
-
+    
+    # cut off any data that will create incomplete batches
+    num_batches = len(inputs) // batch_size
+    inputs = inputs[:num_batches*batch_size]
+    targets = targets[:num_batches*batch_size]
+    
     # create Dataset object
     dataset = Sequence_Data(x=inputs, y=targets)
 

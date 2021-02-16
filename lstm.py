@@ -32,14 +32,14 @@ class LSTM_Model(nn.Module):
         self.lstm_modules = nn.ModuleList(modules=self.lstm_modules)
         self.fc = nn.Linear(in_features=embed_dims, out_features=vocab_size, bias=bias)
 
-        self._reset_parameters()
+        self.reset_parameters()
 
     # set intial parameters
-    def _reset_parameters(self):
+    def reset_parameters(self):
         for param in self.parameters():
             nn.init.uniform_(param, -self.init_param, self.init_param)
 
-    def _init_state(self, batch_size):
+    def init_state(self, batch_size):
         dev = next(self.parameters()).device
         states = [
             (torch.zeros(1, batch_size, layer.hidden_size, device=dev),
@@ -48,10 +48,10 @@ class LSTM_Model(nn.Module):
         ]
         return states
 
-    def _detach(self, states):
-        return [(h._detach(), c._detach()) for (h, c) in states]
+    def detach(self, states):
+        return [(h.detach(), c.detach()) for (h, c) in states]
 
-    def _forward(self, x, states):
+    def forward(self, x, states):
         x = self.embed(x)
         x = self.dropout(x)
         for i, lstm in enumerate(self.lstm_modules):
