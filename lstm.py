@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 class LSTM_Model(nn.Module):
-    def __init__(self, vocab_size:int, max_grad:float, embed_dims:int, num_layers:int,
+    def __init__(self, device:str, vocab_size:int, max_grad:float, embed_dims:int, num_layers:int,
                  dropout_prob:float, init_range:float, bias:bool, embed_tying:bool):
         """
         :param vocab_size:
@@ -26,13 +26,18 @@ class LSTM_Model(nn.Module):
         self.vocab_size = vocab_size
         self.dropout = nn.Dropout(p=dropout_prob)
         self.embed = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embed_dims)
-        self.lstm_modules = [nn.LSTM(input_size=embed_dims, hidden_size=embed_dims, bias=bias, batch_first=True)
-                             for _ in range(num_layers)
-                             ]
-        self.lstm_modules = nn.ModuleList(modules=self.lstm_modules)
+        lstms = [nn.LSTM(input_size=embed_dims, hidden_size=embed_dims, bias=bias, batch_first=True)
+                 for _ in range(num_layers)
+                 ]
+        self.lstms = nn.ModuleList(modules=lstms)
         self.fc = nn.Linear(in_features=embed_dims, out_features=vocab_size, bias=bias)
 
         self.reset_parameters()
+
+        if device == "gpu" and torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        else:
+            self.device = torch.device("cpu")
 
     # set intial parameters
     def reset_parameters(self):
@@ -40,21 +45,20 @@ class LSTM_Model(nn.Module):
             nn.init.uniform_(param, -self.init_param, self.init_param)
 
     def init_state(self, batch_size):
-        dev = next(self.parameters()).device
         states = [
-            (torch.zeros(1, batch_size, layer.hidden_size, device=dev),
-             torch.zeros(1, batch_size, layer.hidden_size, device=dev))
-                  for layer in self.lstm_modules
+            (torch.zeros(1, batch_size, layer.hidden_size, device=self.device),
+             torch.zeros(1, batch_size, layer.hidden_size, device=self.device))
+                  for layer in self.lstms
         ]
         return states
 
-    def detach(self, states):
+    def detach_states(self, states):
         return [(h.detach(), c.detach()) for (h, c) in states]
 
     def forward(self, x, states):
         x = self.embed(x)
         x = self.dropout(x)
-        for i, lstm in enumerate(self.lstm_modules):
+        for i, lstm in enumerate(self.lstms):
             x, states[i] = lstm(x, states[i])
             x = self.dropout(x)
         scores = self.fc(x)
@@ -66,7 +70,6 @@ if __name__ == "__main__":
     time_steps = 10
     freq_threshold = 1
     epochs = 2
-
 
     datasets = init_datasets(topic='wiki', freq_threshold=freq_threshold, time_steps=time_steps,
                              batch_size=batch_size, path='data/corpora')
