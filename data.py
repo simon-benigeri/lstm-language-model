@@ -121,18 +121,18 @@ def _init_corpora(path:str, topic:str, freq_threshold:int,
     # return np.array(train).T, np.array(valid).T, np.array(test).T, word2index
 
 
-def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[Tuple]:
+def _old_generate_io_sequences(sequence:np.ndarray, time_steps:int) -> Tuple:# -> List[Tuple]:
     """
-    :param data: sequence of integer representation of words
+    :param sequence: sequence of integer representation of words
     :param time_steps: number of time steps in LSTM cell
     :return: Tuple of torch tensors of shape (n, time_steps, 1)
     """
-    data = torch.LongTensor(data)
+    sequence = torch.LongTensor(sequence)
     # split tensor into tensors of of size time_steps
-    data = torch.split(tensor=data, split_size_or_sections=time_steps)
+    sequence = torch.split(tensor=sequence, split_size_or_sections=time_steps)
 
     # note: word2index['<pad>'] = 0
-    sequences = pad_sequence(data, batch_first=True, padding_value=0)
+    sequences = pad_sequence(sequence, batch_first=True, padding_value=0)
 
     # from seq we generate 2 copies.
     # inputs=seq[:-1], targets=seq[1:]
@@ -140,6 +140,27 @@ def _generate_io_sequences(data:np.ndarray, time_steps:int) -> Tuple:# -> List[T
     sequences_targets = sequences.narrow_copy(1, 1, sequences.shape[1] - 1)
 
     return (sequences_inputs, sequences_targets)
+
+def _generate_io_sequences(sequence: np.ndarray, time_steps: int) -> Tuple:
+    """
+    :param sequence: sequence of integer representation of words
+    :param time_steps: number of time steps in LSTM cell
+    :return: Tuple of torch tensors of shape (n, time_steps)
+    """
+    sequence = torch.LongTensor(sequence)
+
+    # from seq we generate 2 copies.
+    inputs, targets = sequence, sequence[1:]
+
+    # split seq into seq of of size time_steps
+    inputs = torch.split(tensor=inputs, split_size_or_sections=time_steps)
+    targets = torch.split(tensor=targets, split_size_or_sections=time_steps)
+
+    # note: word2index['<pad>'] = 0
+    inputs_padded = pad_sequence(inputs, batch_first=True, padding_value=0)
+    targets_padded = pad_sequence(targets, batch_first=True, padding_value=0)
+
+    return (inputs_padded, targets_padded)
 
 
 def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> DataLoader:
@@ -150,7 +171,8 @@ def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> D
     :return: DataLoader for SGD
     """
     # given int list, generate input and output sequences of length = time_steps
-    inputs, targets = _generate_io_sequences(data=data, time_steps=time_steps)
+    # inputs, targets = _old_generate_io_sequences(sequence=data, time_steps=time_steps)
+    inputs, targets = _generate_io_sequences(sequence=data, time_steps=time_steps)
     
     # cut off any data that will create incomplete batches
     num_batches = len(inputs) // batch_size
@@ -190,7 +212,7 @@ def init_datasets(topic:str, freq_threshold:int, time_steps:int, batch_size:int,
 if __name__=='__main__':
     start_time = time.time()
     # data = np.array(list(range(1,11)))
-    # seqs = _generate_io_sequences(data, time_steps=5)
+    # seqs = _old_generate_io_sequences(data, time_steps=5)
     # print(seqs)
 
 

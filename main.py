@@ -117,16 +117,16 @@ def main():
         'learning_rate': 1,
         'learning_rate_decay': 1.2,
         'num_layers': 2,
-        'batch_size': 3,
-        'time_steps': 5,
+        'batch_size': 20,
+        'time_steps': 35,
         'max_grad': 5,
         'embed_tying': False,
         'bias': False,
         'save_model': True,
         'load_model': False,
         'model_path': 'lstm_model',
-        'topic': 'nyt_covid', # enter 'wiki' or 'nyt_covid'
-        'path': 'data/small_test_corpora'
+        'topic': 'wiki', # enter 'wiki' or 'nyt_covid'
+        'path': 'data/corpora'
     }
 
     data_params = {k:hyperparams[k] for k in ['topic','freq_threshold', 'time_steps', 'batch_size',  'path']}
