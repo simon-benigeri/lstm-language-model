@@ -148,7 +148,7 @@ def main():
         'save_model': True,
         'load_model': False,
         'model_path': 'lstm_model',
-        'topic': 'wiki', # enter 'wiki' or 'nyt_covid'
+        'topic': 'nyt_covid', # enter 'wiki' or 'nyt_covid'
         'path': '../data/corpora'
     }
 
