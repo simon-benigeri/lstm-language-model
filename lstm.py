@@ -1,8 +1,9 @@
 from data import init_datasets
 import time
-import numpy as np
 import torch
 import torch.nn as nn
+# import torch_xla
+# import torch_xla.core.xla_model as xm
 
 class LSTM_Model(nn.Module):
     def __init__(self, device:str, vocab_size:int, max_grad:float, embed_dims:int, num_layers:int,
@@ -34,6 +35,8 @@ class LSTM_Model(nn.Module):
 
         self.reset_parameters()
 
+        # if device == "tpu":
+        #   self.device = xm.xla_device()
         if device == "gpu" and torch.cuda.is_available():
             self.device = torch.device("cuda")
         else:
@@ -46,13 +49,11 @@ class LSTM_Model(nn.Module):
 
     def init_state(self, batch_size):
         dev = next(self.parameters()).device
-
         states = [
             (torch.zeros(1, batch_size, layer.hidden_size, device=dev),
              torch.zeros(1, batch_size, layer.hidden_size, device=dev))
                   for layer in self.lstms
         ]
-
         return states
 
     def detach_states(self, states):
@@ -70,18 +71,17 @@ class LSTM_Model(nn.Module):
 if __name__ == "__main__":
     start_time = time.time()
     batch_size = 20
-    time_steps = 10
-    freq_threshold = 1
-    epochs = 2
+    time_steps = 30
+    freq_threshold = 3
+    epochs = 20
 
     datasets = init_datasets(topic='wiki', freq_threshold=freq_threshold, time_steps=time_steps,
                              batch_size=batch_size, path='data/corpora')
 
     data_loaders = datasets['data_loaders']
     vocab_size = datasets['vocab_size']
-    embed_dims = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
-    model = LSTM_Model(vocab_size=vocab_size, max_grad=5, embed_dims=embed_dims, num_layers=2,
+    model = LSTM_Model(device='cpu', vocab_size=vocab_size, max_grad=5, embed_dims=200, num_layers=2,
                        dropout_prob=0.5, init_range=0.05, bias=False, embed_tying=False)
-
+    print(model._modules)
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))

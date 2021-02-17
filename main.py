@@ -1,9 +1,11 @@
 from lstm import LSTM_Model
 from data import init_datasets
+from typing import List, Dict, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
 import time
 
 # (i) embedding space dimensionality,
@@ -28,15 +30,15 @@ def neg_log_likelihood_loss(scores, targets):
     """
     # targets are shape (batch_size, time_steps)
     batch_size = targets.size(0)
-    # scores are reshaped to (batch_size * time_steps, vocab_size)
+    # scores: (batch_size, time_steps, vocab_size)(batch_size * time_steps, vocab_size)
     scores = scores.reshape(-1, scores.size(2))
-    # targets are reshaped to (batch_size*time_steps)
+    # targets: (batch_size, time_steps) -> (batch_size*time_steps)
     targets = targets.reshape(-1)
-
+    
     return F.cross_entropy(input=scores, target=targets) * batch_size
 
 
-def get_perplexity(data, model, batch_size):
+def get_perplexity(data:DataLoader, model:nn.Module, batch_size:int) -> float:
     """
     :param data:
     :param model:
@@ -47,26 +49,37 @@ def get_perplexity(data, model, batch_size):
     with torch.no_grad():
         losses = []
         states = model.init_state(batch_size)
-        for x, y in data:
-            scores, states = model(x, states)
+        for (x, y) in data:
+            # scores, states = model(x, states)
+            scores, states = model.forward(x=x, states=states)
             loss = neg_log_likelihood_loss(scores, y)
             losses.append(loss.data.item() / batch_size)
-    return np.exp(np.mean(losses))
+
+    perplexity = np.exp(np.mean(losses))
+
+    return perplexity
 
 
-def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
+def train(data:Tuple[DataLoader, DataLoader, DataLoader], model:nn.Module, epochs:int, learning_rate:float,
+          learning_rate_decay:float, max_grad:float) -> Tuple[nn.Module, Dict]:
     """
-    :param data:
-    :param model:
-    :param epochs:
-    :param learning_rate:
-    :param learning_rate_decay:
-    :param max_grad:
-    :return:
+    model training loop
+    :param data: tup of DataLoaders train, valid, test
+    :param model: LSTM_Model
+    :param epochs: number of epochs
+    :param learning_rate: initial learning rate
+    :param learning_rate_decay: learning rate decay factor
+    :param max_grad: gradient clipped at this value
+    :return: trained model and perplexity scores (per epoch for valid and final score for test)
     """
-    
+    # load data. datta :=
     train_loader, valid_loader, test_loader = data
     start_time = time.time()
+
+    perplexity_scores = {
+        'valid': [],
+        'test': 0
+    }
     
     total_words = 0
     print("Starting training.\n")
@@ -75,15 +88,15 @@ def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
     for epoch in range(epochs):
         states = model.init_state(batch_size)
 
-        if epoch >= 5:
+        if epoch + 1 > 5:
             learning_rate = learning_rate / learning_rate_decay
         
         for i, (x, y) in enumerate(train_loader):
             total_words += x.numel()
             model.zero_grad()
-
             states = model.detach_states(states)
-            scores, states = model(x, states)
+            scores, states = model.forward(x, states)
+            # scores, states = model(x, states)
             loss = neg_log_likelihood_loss(scores=scores, targets=y)
             loss.backward()
             
@@ -104,12 +117,17 @@ def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
         
         model.eval()
         valid_perplexity = get_perplexity(data=valid_loader, model=model, batch_size=batch_size)
+        perplexity_scores['valid'].append(valid_perplexity)
         print("Epoch : {:d} || Validation set perplexity : {:.3f}".format(epoch+1, valid_perplexity))
         print("*************************************************\n")
+
     test_perp = get_perplexity(data=test_loader, model=model, batch_size=batch_size)
+    perplexity_scores['test'] = test_perp
     print("Test set perplexity : {:.3f}".format(test_perp))
+
     print("Training is over.")
-    return model
+
+    return model, perplexity_scores
 
 
 def main():
@@ -139,11 +157,11 @@ def main():
     data_params = {k:hyperparams[k] for k in ['topic','freq_threshold', 'time_steps', 'batch_size',  'path']}
     datasets = init_datasets(**data_params)
 
-    # we store the vcab size and word2index dict
+    # get vocab size and word2index dict
     vocab_size = datasets['vocab_size']
     word2index = datasets['word2index']
 
-    # we get the data_loaders: train, valid, test
+    # get the data_loaders: train, valid, test
     data_loaders = datasets['data_loaders']
 
     # set params for model training
@@ -152,24 +170,31 @@ def main():
     model_params = {k:hyperparams[k] for k in model_params}
     model_params['vocab_size'] = vocab_size
 
+    # create model
     model = LSTM_Model(**model_params)
+
+    # as a sanity check, we print out vocab size and perplexity on validation set
     print(f"vocab size : {vocab_size}")
+    # data_loaders := (train, valid, test)
     perplexity = get_perplexity(data=data_loaders[1], model=model, batch_size=data_loaders[1].batch_size)
     print("perplexity on %s dataset before training: %.3f, " % ('valid', perplexity))
 
+    # load model
     if hyperparams['load_model']:
         model.load_state_dict(torch.load(hyperparams['model_path']))
-
     else:
+        # set training parameters
         training_params = ['epochs', 'learning_rate', 'learning_rate_decay', 'max_grad']
         training_params = {k:hyperparams[k] for k in training_params}
-        model = train(data=data_loaders, model=model, **training_params)
+        # launch model training
+        model, perplexity_scores = train(data=data_loaders, model=model, **training_params)
 
     # now calculate perplexities for train, valid, test
     for d, l in zip(data_loaders, ['train', 'valid', 'test']):
         perplexity = get_perplexity(data=d, model=model, batch_size=d.batch_size)
         print("perplexity on %s dataset after training : %.3f, " % (l, perplexity))
 
+    # save model
     if hyperparams['save_model']:
         torch.save(model.state_dict(), hyperparams['model_path'])
 
