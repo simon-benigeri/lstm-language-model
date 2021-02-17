@@ -52,7 +52,7 @@ class LSTM_Model(nn.Module):
              torch.zeros(1, batch_size, layer.hidden_size, device=dev))
                   for layer in self.lstms
         ]
-        
+
         return states
 
     def detach_states(self, states):

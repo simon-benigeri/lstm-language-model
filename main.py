@@ -21,35 +21,49 @@ import time
 
 
 def neg_log_likelihood_loss(scores, targets):
-    # substituting with cross entropy loss
-    # get batch size
+    """
+    :param scores: shape (batch_size, time_steps, vocab_size)
+    :param targets: shape (batch_size, time_steps)
+    :return: cross entropy loss, takes input (N, C) and (N) where C=num classes (words in vocab)
+    """
     # targets are shape (batch_size, time_steps)
-    # targets are reshapes to (batch_size*time_steps)
     batch_size = targets.size(0)
-
-    # scores are shape (batch_size, time_steps, vocab_size)
     # scores are reshaped to (batch_size * time_steps, vocab_size)
-    return F.cross_entropy(scores.reshape(-1, scores.size(2)), targets.reshape(-1)) * batch_size
+    scores = scores.reshape(-1, scores.size(2))
+    # targets are reshaped to (batch_size*time_steps)
+    targets = targets.reshape(-1)
+
+    return F.cross_entropy(input=scores, target=targets) * batch_size
 
 
 def get_perplexity(data, model, batch_size):
+    """
+    :param data:
+    :param model:
+    :param batch_size:
+    :return:
+    """
     model.eval()
     with torch.no_grad():
         losses = []
         states = model.init_state(batch_size)
         for x, y in data:
-            # print(f"x size : {x.size()}")
-            # print(f"y size : {y.size()}")
             scores, states = model(x, states)
-            # print(f"scores size : {scores.size()}")
             loss = neg_log_likelihood_loss(scores, y)
-            # print(f"loss : {loss}")
-            #Again with the sum/average implementation described in 'nll_loss'.
             losses.append(loss.data.item() / batch_size)
     return np.exp(np.mean(losses))
 
 
 def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
+    """
+    :param data:
+    :param model:
+    :param epochs:
+    :param learning_rate:
+    :param learning_rate_decay:
+    :param max_grad:
+    :return:
+    """
     
     train_loader, valid_loader, test_loader = data
     start_time = time.time()
@@ -59,7 +73,6 @@ def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
     batch_size = train_loader.batch_size
     
     for epoch in range(epochs):
-        # batch_size = train_loader.batch_size
         states = model.init_state(batch_size)
 
         if epoch > 5:
@@ -68,8 +81,7 @@ def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
         for i, (x, y) in enumerate(train_loader):
             total_words += x.numel()
             model.zero_grad()
-            
-            # batch_size = len(x))
+
             states = model.detach_states(states)
             scores, states = model(x, states)
             loss = neg_log_likelihood_loss(scores=scores, targets=y)
@@ -139,20 +151,11 @@ def main():
                     'num_layers', 'max_grad', 'embed_tying', 'bias']
     model_params = {k:hyperparams[k] for k in model_params}
     model_params['vocab_size'] = vocab_size
-    # Masum recommended this as embed dims
-    # TODO: Make this more easily modifiable.
-    #   Want to do embed dims = user input if input provied, else embed dims = line below
-    # model_params['embed_dims'] = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
+
     model = LSTM_Model(**model_params)
     print(f"vocab size : {vocab_size}")
     perplexity = get_perplexity(data=data_loaders[1], model=model, batch_size=data_loaders[1].batch_size)
     print("perplexity on %s dataset before training: %.3f, " % ('valid', perplexity))
-    """
-    for d, l in zip(data_loaders, ['train', 'valid', 'test']):
-        perplexity = get_perplexity(data=d, model=model, batch_size=d.batch_size)
-        print("perplexity on %s dataset before training: %.3f, " % (l, perplexity))
-    """
-
 
     if hyperparams['load_model']:
         model.load_state_dict(torch.load(hyperparams['model_path']))
