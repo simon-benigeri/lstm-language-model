@@ -80,9 +80,9 @@ if __name__ == "__main__":
     start_time = time.time()
 
     # set paths and hyper param
-    INPUT_PATH = './data/raw_text_files'  # '../data/nyt_small_samples' #
+    INPUT_PATH = '../data/raw_text_files'  # '../data/nyt_small_samples' #
 
-    OUTPUT_CORPUS_PATH = './data/corpora'
+    OUTPUT_CORPUS_PATH = '../data/corpora'
     # load datasets
     dataset = load_data(path=INPUT_PATH)
     # clean dataset

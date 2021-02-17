@@ -8,7 +8,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 
-PATH = 'data/small_test_corpora'
+PATH = '../data/small_test_corpora'
 
 class Sequence_Data(Dataset):
     def __init__(self, x:torch.LongTensor, y:torch.LongTensor):

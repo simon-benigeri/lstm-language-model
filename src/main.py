@@ -1,6 +1,6 @@
-from lstm import LSTM_Model
-from data import init_datasets
-from typing import List, Dict, Tuple
+from src.lstm import LSTM_Model
+from src.datasets import init_datasets
+from typing import Dict, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
@@ -34,7 +34,7 @@ def neg_log_likelihood_loss(scores, targets):
     scores = scores.reshape(-1, scores.size(2))
     # targets: (batch_size, time_steps) -> (batch_size*time_steps)
     targets = targets.reshape(-1)
-    
+
     return F.cross_entropy(input=scores, target=targets) * batch_size
 
 
@@ -72,7 +72,6 @@ def train(data:Tuple[DataLoader, DataLoader, DataLoader], model:nn.Module, epoch
     :param max_grad: gradient clipped at this value
     :return: trained model and perplexity scores (per epoch for valid and final score for test)
     """
-    # load data. datta :=
     train_loader, valid_loader, test_loader = data
     start_time = time.time()
 
@@ -145,12 +144,12 @@ def main():
         'time_steps': 30,
         'max_grad': 2.0,
         'embed_tying': False,
-        'bias': False,
+        'bias': True,
         'save_model': True,
         'load_model': False,
         'model_path': 'lstm_model',
         'topic': 'wiki', # enter 'wiki' or 'nyt_covid'
-        'path': 'data/corpora'
+        'path': '../data/corpora'
     }
 
     # set params for init_datasets

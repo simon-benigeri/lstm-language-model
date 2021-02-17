@@ -1,4 +1,4 @@
-from data import init_datasets
+from src.datasets import init_datasets
 import time
 import torch
 import torch.nn as nn
@@ -9,14 +9,16 @@ class LSTM_Model(nn.Module):
     def __init__(self, device:str, vocab_size:int, max_grad:float, embed_dims:int, num_layers:int,
                  dropout_prob:float, init_range:float, bias:bool, embed_tying:bool):
         """
-        :param vocab_size:
-        :param max_grad:
-        :param embed_dims:
-        :param num_layers:
-        :param dropout_prob:
-        :param init_range:
-        :param bias:
-        :param embed_tying:
+        :param device: cpu, gpu or tpu
+        :param vocab_size: vocabulary size
+        :param max_grad: gradient clipped at this value
+        :param embed_dims: output dimensions of embedding layer
+        :param num_layers: number of lstm layers
+        :param dropout_prob: dropout probability
+        :param init_range: weights are initialized by drawing samples
+                        from uniform distribution over interval [init_range, init_range]
+        :param bias: if true, we use bias weights in nn layers
+        :param embed_tying: we don't know what this is and we didn't use it
         """
         super().__init__()
         self.max_grad = max_grad
@@ -76,12 +78,12 @@ if __name__ == "__main__":
     epochs = 20
 
     datasets = init_datasets(topic='wiki', freq_threshold=freq_threshold, time_steps=time_steps,
-                             batch_size=batch_size, path='data/corpora')
+                             batch_size=batch_size, path='../data/corpora')
 
     data_loaders = datasets['data_loaders']
     vocab_size = datasets['vocab_size']
     model = LSTM_Model(device='cpu', vocab_size=vocab_size, max_grad=5, embed_dims=200, num_layers=2,
-                       dropout_prob=0.5, init_range=0.05, bias=False, embed_tying=False)
-    print(model._modules)
+                       dropout_prob=0.5, init_range=0.05, bias=True, embed_tying=False)
+    print(model)
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))

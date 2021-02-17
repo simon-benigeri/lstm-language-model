@@ -289,7 +289,7 @@ def main(_):
     print(socket.gethostname())
     server = socket.gethostname()
     if server == 'steve':
-        data_dir = '..'
+        data_dir = '../..'
     else:
         data_dir = '//scratch//ddemeter'
         
