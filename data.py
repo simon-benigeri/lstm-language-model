@@ -134,8 +134,8 @@ def _generate_io_sequences(sequence: np.ndarray, time_steps: int) -> Tuple:
     targets = torch.split(tensor=targets, split_size_or_sections=time_steps)
 
     # recall: word2index['<pad>'] = 0
-    inputs_padded = pad_sequence(inputs, batch_first=True, padding_value=0)
-    targets_padded = pad_sequence(targets, batch_first=True, padding_value=0)
+    inputs_padded = pad_sequence(sequences=inputs, batch_first=True, padding_value=0)
+    targets_padded = pad_sequence(sequences=targets, batch_first=True, padding_value=0)
 
     return (inputs_padded, targets_padded)
 
@@ -186,18 +186,5 @@ def init_datasets(topic:str, freq_threshold:int, time_steps:int, batch_size:int,
 
 if __name__=='__main__':
     start_time = time.time()
-    # data = np.array(list(range(1,11)))
-    # seqs = _old_generate_io_sequences(data, time_steps=5)
-    # print(seqs)
-
-
-    """
-    # start training loop
-    for epoch in range(epochs):
-        for step, (x, y) in enumerate(test_loader):  # gives batch data
-            print(x, y)
-            # print(ass)
-        pass
-    """
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))

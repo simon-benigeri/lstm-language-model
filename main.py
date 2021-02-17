@@ -75,7 +75,7 @@ def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
     for epoch in range(epochs):
         states = model.init_state(batch_size)
 
-        if epoch > 5:
+        if epoch >= 5:
             learning_rate = learning_rate / learning_rate_decay
         
         for i, (x, y) in enumerate(train_loader):
@@ -114,25 +114,25 @@ def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
 
 def main():
     hyperparams = {
-        'embed_dims': 25,
+        'embed_dims': 200,
         'device': 'cpu', # 'gpu'
-        'freq_threshold': 1,
+        'freq_threshold': 3,
         'dropout_prob': 0.5,
         'init_range': 0.05,
-        'epochs': 10,
+        'epochs': 20,
         'learning_rate': 1,
-        'learning_rate_decay': 1.2,
+        'learning_rate_decay': 1.25,
         'num_layers': 2,
-        'batch_size': 3, #TODO: on nyt small dataset, we get issues with batch size and timesteps. Not sure why
-        'time_steps': 10,
-        'max_grad': 5,
+        'batch_size': 20,
+        'time_steps': 30,
+        'max_grad': 2.0,
         'embed_tying': False,
         'bias': False,
         'save_model': True,
         'load_model': False,
         'model_path': 'lstm_model',
-        'topic': 'nyt_covid', # enter 'wiki' or 'nyt_covid'
-        'path': 'data/test_corpora'
+        'topic': 'wiki', # enter 'wiki' or 'nyt_covid'
+        'path': 'data/corpora'
     }
 
     # set params for init_datasets
