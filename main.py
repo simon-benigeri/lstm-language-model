@@ -20,36 +20,15 @@ import time
 # (xii) a bias flag, and any others that you think may be necessary.
 
 
-#The loss function.
-def _neg_log_likelihood_loss(scores, y):
-    batch_size = y.size(1)
-    # print("y shape: ", y.shape)
-    # print("scores shape: ", scores.shape)
-    expscores = scores.exp()
-    # print("expscores shape: ", expscores.shape)
-    probabilities = expscores / expscores.sum(1, keepdim = True)
-    # print("prob shape: ", probabilities.shape)
-    answerprobs = probabilities[range(len(y.reshape(-1))), y.reshape(-1)]
-    #I multiply by batch_size as in the original paper
-    #Zaremba et al. sum the loss over batches but average these over time.
-    return torch.mean(-torch.log(answerprobs) * batch_size)
-
 def neg_log_likelihood_loss(scores, targets):
     # substituting with cross entropy loss
     # get batch size
-    batch_size = targets.size(1)
-
-    # print(f"scores size : {scores.size()}")
-    # print(f"scores reshaped to : {scores.reshape(-1, scores.size(2)).size()}")
-
-    # print(f"targets size : {targets.size()}")
-    # print(f"targets reshaped to : {targets.reshape(-1).size()}")
+    # targets are shape (batch_size, time_steps)
+    # targets are reshapes to (batch_size*time_steps)
+    batch_size = targets.size(0)
 
     # scores are shape (batch_size, time_steps, vocab_size)
     # scores are reshaped to (batch_size * time_steps, vocab_size)
-
-    # targets are shape (batch_size, time_steps)
-    # targets are reshapes to (batch_size*time_steps)
     return F.cross_entropy(scores.reshape(-1, scores.size(2)), targets.reshape(-1)) * batch_size
 
 
@@ -64,7 +43,6 @@ def get_perplexity(data, model, batch_size):
             scores, states = model(x, states)
             # print(f"scores size : {scores.size()}")
             loss = neg_log_likelihood_loss(scores, y)
-
             # print(f"loss : {loss}")
             #Again with the sum/average implementation described in 'nll_loss'.
             losses.append(loss.data.item() / batch_size)
@@ -124,7 +102,7 @@ def train(data, model, epochs, learning_rate, learning_rate_decay, max_grad):
 
 def main():
     hyperparams = {
-        'embed_dims': 200,
+        'embed_dims': 25,
         'device': 'cpu', # 'gpu'
         'freq_threshold': 1,
         'dropout_prob': 0.5,
@@ -133,8 +111,8 @@ def main():
         'learning_rate': 1,
         'learning_rate_decay': 1.2,
         'num_layers': 2,
-        'batch_size': 20, #TODO: on nyt small dataset, we get issues with batch size and timesteps. Not sure why
-        'time_steps': 30,
+        'batch_size': 3, #TODO: on nyt small dataset, we get issues with batch size and timesteps. Not sure why
+        'time_steps': 10,
         'max_grad': 5,
         'embed_tying': False,
         'bias': False,

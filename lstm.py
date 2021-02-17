@@ -46,11 +46,13 @@ class LSTM_Model(nn.Module):
 
     def init_state(self, batch_size):
         dev = next(self.parameters()).device
+
         states = [
             (torch.zeros(1, batch_size, layer.hidden_size, device=dev),
              torch.zeros(1, batch_size, layer.hidden_size, device=dev))
                   for layer in self.lstms
         ]
+        
         return states
 
     def detach_states(self, states):
@@ -80,29 +82,6 @@ if __name__ == "__main__":
     embed_dims = int(np.ceil(np.sqrt(np.sqrt(vocab_size))))
     model = LSTM_Model(vocab_size=vocab_size, max_grad=5, embed_dims=embed_dims, num_layers=2,
                        dropout_prob=0.5, init_range=0.05, bias=False, embed_tying=False)
-    # print(model._modules)
-    """
-    train_data, valid_data, test_data = data_loaders
-    train_data = train_data.values()
-    start__train_time = time.time()
-
-    print("Starting training.\n")
-
-    for epoch in range(epochs):
-        model.train()
-
-        batch_size = train_data.batch_size
-        states = model._init_state(batch_size)
-
-        for i, (x, y) in enumerate(train_data):
-            batch_size = len(x)
-            model.zero_grad()
-            states = model._detach(states)
-            scores, states = model(x, states)
-            print(x)
-            print(y)
-    """
-
 
     execution_time = (time.time() - start_time)
     print('Execution time in seconds: ' + str(execution_time))
