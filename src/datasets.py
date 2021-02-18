@@ -8,9 +8,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 
-PATH = '../data/small_test_corpora'
-
-class Sequence_Data(Dataset):
+class Sequence_Dataset(Dataset):
     def __init__(self, x:torch.LongTensor, y:torch.LongTensor):
         self.x = x
         self.y = y
@@ -46,43 +44,7 @@ def _tokenize(text: str) -> List[str]:
     words = text.strip().split(' ')
     return words
 
-
-def _remove_wikitags(wikitext:str) -> str:
-    """
-    wikitext files have tags = = STUF = =
-    :param wikitext:
-    :return: wikitext without the tags
-    """
-    wikitext = wikitext.replace('=', ' ')
-    wikitext = ' '.join(wikitext.split())
-    return wikitext
-
-
-def _apply_freq_threshold(words: List[str], threshold: int) -> List[str]:
-    """
-    :param words: list of tokens
-    :param threshold: frequency threshold
-    :return: list of tokens, where tokens with frequency below the threshold are replaced by 'unk'
-    """
-    # Get Frequency distribution
-    freq_dist = nltk.FreqDist(words)
-    above_threshold = dict()
-    below_threshold = dict()
-
-    #FreqDist.iteritems() returns items in decreasing order of frequency
-    for x, f in freq_dist.items():
-        if not freq_dist[x] > threshold:
-            below_threshold[x] = f
-        else:
-            above_threshold[x] = f
-
-    filtered_words = ['<unk>' if word in below_threshold else word for word in words]
-
-    return filtered_words
-
-
-def _init_corpora(path:str, topic:str, freq_threshold:int,
-                  ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, int]]:
+def _init_corpora(path:str, topic:str, freq_threshold:int,) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, int]]:
     """
     :param path:
     :param topic:
@@ -94,9 +56,10 @@ def _init_corpora(path:str, topic:str, freq_threshold:int,
     test = _load_text_data(os.path.join(path, f"{topic}.test.txt"))
 
     if topic == 'wiki':
-        train = _remove_wikitags(wikitext=train)
-        valid = _remove_wikitags(wikitext=valid)
-        test = _remove_wikitags(wikitext=test)
+        # remove wiki tags
+        train = ' '.join(train.replace('=', ' ').split())
+        valid = ' '.join(valid.replace('=', ' ').split())
+        test = ' '.join(test.replace('=', ' ').split())
 
     # split into word/token
     train = _tokenize(text=train)
@@ -104,14 +67,16 @@ def _init_corpora(path:str, topic:str, freq_threshold:int,
     test = _tokenize(text=test)
 
     # apply frequency threshold to training set
-    train = _apply_freq_threshold(words=train, threshold=freq_threshold)
+    freq_dist = nltk.FreqDist(train)
+    train = ['<unk>' if freq_dist[t] < freq_threshold else t for t in train]
+
     # create vocabulary: set of words in train and word to index mapping
-    words = sorted(set(train))
-    words.insert(0, '<pad>')
-    word2index = {word: index for index, word in enumerate(words)}
+    vocab = sorted(set(train))
+    word2index = {word: index+1 for index, word in enumerate(vocab)}
+    word2index['<pad>'] = 0
 
     # convert each word to a list of integers. if word is not in vocab, we use unk
-    train = [word2index[word] if word in word2index else word2index['<unk>'] for word in train]
+    train = [word2index[word] for word in train]
     valid = [word2index[word] if word in word2index else word2index['<unk>'] for word in valid]
     test = [word2index[word] if word in word2index else word2index['<unk>'] for word in test]
 
@@ -140,7 +105,7 @@ def _generate_io_sequences(sequence: np.ndarray, time_steps: int) -> Tuple:
     return (inputs_padded, targets_padded)
 
 
-def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> DataLoader:
+def _build_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> DataLoader:
     """
     :param data: input list of integers
     :param batch_size: hyper parameter, for minibatch size
@@ -148,7 +113,6 @@ def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> D
     :return: DataLoader for SGD
     """
     # given int list, generate input and output sequences of length = time_steps
-    # inputs, targets = _old_generate_io_sequences(sequence=data, time_steps=time_steps)
     inputs, targets = _generate_io_sequences(sequence=data, time_steps=time_steps)
     
     # cut off any data that will create incomplete batches
@@ -157,13 +121,11 @@ def _intlist_to_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> D
     targets = targets[:num_batches*batch_size]
     
     # create Dataset object and from it create data loader
-    dataset = Sequence_Data(x=inputs, y=targets)
-    data_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
-
-    return data_loader
+    dataset = Sequence_Dataset(x=inputs, y=targets)
+    return DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
 
 
-def init_datasets(topic:str, freq_threshold:int, time_steps:int, batch_size:int, path:str=PATH) -> Dict:
+def init_datasets(topic:str, freq_threshold:int, time_steps:int, batch_size:int, path:str) -> Dict:
     """
     :param path: path to data files: [topic].train.txt
     :param topic: [topic].train.txt, where topic can be wikitext, or nyt_covid
@@ -173,18 +135,12 @@ def init_datasets(topic:str, freq_threshold:int, time_steps:int, batch_size:int,
     :return: datasets dict
     """
     train, valid, test, word2index = _init_corpora(path=path, topic=topic, freq_threshold=freq_threshold)
-    train_loader = _intlist_to_dataloader(data=train, time_steps=time_steps, batch_size=batch_size)
-    valid_loader = _intlist_to_dataloader(data=valid, time_steps=time_steps, batch_size=batch_size)
-    test_loader = _intlist_to_dataloader(data=test, time_steps=time_steps, batch_size=batch_size)
+    train_loader = _build_dataloader(data=train, time_steps=time_steps, batch_size=batch_size)
+    valid_loader = _build_dataloader(data=valid, time_steps=time_steps, batch_size=batch_size)
+    test_loader = _build_dataloader(data=test, time_steps=time_steps, batch_size=batch_size)
     datasets = {
         'data_loaders': (train_loader, valid_loader, test_loader),
         'word2index': word2index,
         'vocab_size': len(word2index)
     }
     return datasets
-
-
-if __name__=='__main__':
-    start_time = time.time()
-    execution_time = (time.time() - start_time)
-    print('Execution time in seconds: ' + str(execution_time))
