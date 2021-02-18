@@ -8,19 +8,6 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import time
 
-# (i) embedding space dimensionality,
-# (ii) vocabulary frequency threshold,
-# (iii) a keep probability for dropout,
-# (iv) an initialization range,
-# (v) number of training epochs,
-# (vi) an initial learning rate and decay schedule,
-# (vii) number of layers,
-# (viii) batch size,
-# (ix) step size,
-# (x) maximum gradient,
-# (xi) embedding tying,
-# (xii) a bias flag, and any others that you think may be necessary.
-
 
 def neg_log_likelihood_loss(scores, targets):
     """
@@ -143,7 +130,6 @@ def main():
         'batch_size': 20,
         'time_steps': 30,
         'max_grad': 2.0,
-        'embed_tying': False,
         'bias': True,
         'save_model': True,
         'load_model': False,
@@ -165,7 +151,7 @@ def main():
 
     # set params for model training
     model_params = ['device', 'embed_dims', 'dropout_prob', 'init_range',
-                    'num_layers', 'max_grad', 'embed_tying', 'bias']
+                    'num_layers', 'max_grad', 'bias']
     model_params = {k:hyperparams[k] for k in model_params}
     model_params['vocab_size'] = vocab_size
 
