@@ -1,0 +1,5 @@
+<s> it has become <unk> clear to <unk> of young children that the economy can not fully reopen without child care . </s>
+<s> <unk> a <unk> <unk> of child care providers have not been able to survive the <unk> . </s>
+<s> the <unk> was already <unk> : <unk> public education , the child care <unk> <unk> almost <unk> on <unk> <unk> payments , and most providers are <unk> <unk> . </s>
+<s> with <unk> because of the coronavirus , many can not continue to pay <unk> or teachers . </s>
+<s> now that more states are allowing child care centers to reopen , those that <unk> <unk> <unk> expenses because of additional rules about <unk> and new <unk> , like no more than 10 children <unk> <unk> . </s>

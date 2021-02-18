@@ -1,5 +1,6 @@
-data
-obsolete
+data/raw_text_files
+data/small_test/corpora
+data/test_corpora
 .DS_Store
 .idea/
 *.zip

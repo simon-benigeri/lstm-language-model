@@ -1,0 +1,13 @@
+<s> this article is part of the on tech newsletter . </s>
+<s> you can sign up here to receive it <unk> . </s>
+<s> <unk> maps and <unk> <unk> can have real world <unk> . </s>
+<s> cecilia <unk> , a times technology reporter , wrote tuesday about a family living outside <unk> , <unk> , that can ’ t get fast internet service at home — because government maps say the area already has access . </s>
+<s> <unk> , members of the family , the derrys , <unk> to a country market a <unk> miles away , <unk> in their <unk> and <unk> on the <unk> ’ s internet hot <unk> for <unk> classes and to send work emails . </s>
+<s> cecilia <unk> to me why tens of <unk> of americans in rural areas aren ’ t getting fast internet at home , and how the pandemic has made <unk> agree on the problems of the online access <unk> — but not on <unk> . </s>
+<s> <unk> : why can ’ t the derry family access internet service at home ? </s>
+<s> cecilia : if your <unk> area has one home with fast internet service , the government <unk> everyone else as having access , too , even if they don ’ t . </s>
+<s> the derrys only are able to buy internet service that ’ s a <unk> to the early <unk> , but one of their <unk> has the option of fast internet service . </s>
+<s> the government ’ s national <unk> <unk> is <unk> and <unk> <unk> on internet providers to service <unk> like the derrys . </s>
+<s> <unk> derry says he has been complaining about this to the state for years . </s>
+<s> whose <unk> is this ? </s>
+<s> the internet providers are <unk> where their service <unk> , and the federal <unk> commission has allowed them to get away with it for years . </s>
