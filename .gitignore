@@ -1,5 +1,5 @@
 data/raw_text_files
-data/small_test/corpora
+data/small_test_corpora
 data/test_corpora
 .DS_Store
 .idea/
