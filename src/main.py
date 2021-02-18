@@ -135,7 +135,7 @@ def main():
         'load_model': False,
         'model_path': 'lstm_model',
         'topic': 'nyt_covid', # enter 'wiki' or 'nyt_covid'
-        'path': '../data/corpora'
+        'path': '../data/'
     }
 
     # set params for init_datasets
