@@ -11,3 +11,8 @@ The `src` directory contains four scripts:
 + `lstm.py` contains the model described as in the paper.
 + `main.py` runs the pipeline: initialize dataset -> create model -> train model. 
 + `datasets.py` is used to load data to train the model. We used wikitext-2 and some articles scraped from NYT on covid 19. 
+
+The `data` directory 2 corpora:
+
++ `wiki.train.txt`, `wiki.valid.txt`, `wiki.test.txt` contains the wikitext-2 data.
++ `nyt_covid.train.txt`, `nyt_covid.valid.txt`, `nyt_covid.test.txt` contains the NYT covid 19 data.
