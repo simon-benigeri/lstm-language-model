@@ -27,7 +27,7 @@ def _load_text_data(path: str) -> str:
     :return:
     """
     with open(path, 'r') as f:
-        text = f.read() #f.readlines()
+        text = f.read()
     return text
 
 
@@ -108,7 +108,7 @@ def _generate_io_sequences(sequence: np.ndarray, time_steps: int) -> Tuple:
 def _build_dataloader(data:np.ndarray, time_steps:int, batch_size:int) -> DataLoader:
     """
     :param data: input list of integers
-    :param batch_size: hyper parameter, for minibatch size
+    :param batch_size: hyper parameter, for mini-batch size
     :param time_steps: hyper parameter for sequence length for bptt
     :return: DataLoader for SGD
     """
@@ -129,9 +129,9 @@ def init_datasets(topic:str, freq_threshold:int, time_steps:int, batch_size:int,
     """
     :param path: path to data files: [topic].train.txt
     :param topic: [topic].train.txt, where topic can be wikitext, or nyt_covid
-    :param freq_threshold: hyperparam, words in training set with freq < threshold are replaced by '<unk>'
-    :param time_steps: hyperparam, number of time steps and therefore seq_length for bptt
-    :param batch_size: hyperparam, batch size
+    :param freq_threshold: hyperparameter words in training set with freq < threshold are replaced by '<unk>'
+    :param time_steps: hyperparameter number of time steps and therefore seq_length for bptt
+    :param batch_size: hyperparameter batch size
     :return: datasets dict
     """
     train, valid, test, word2index = _init_corpora(path=path, topic=topic, freq_threshold=freq_threshold)
