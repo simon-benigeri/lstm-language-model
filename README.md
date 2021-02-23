@@ -7,8 +7,8 @@ Paper: [https://arxiv.org/abs/1409.2329](https://arxiv.org/abs/1409.2329)
 Original code, in Lua and Torch: [https://github.com/wojzaremba/lstm](https://github.com/wojzaremba/lstm)
 
 To create the environment, go to the repo directory run the commands:  
-```conda env create -f environment.yml
-conda activate lstm_lm```
+`conda env create -f environment.yml`  
+`conda activate lstm_lm`
 
 The `src` directory contains four scripts:
 
