@@ -1,5 +1,5 @@
 # Training an LSTM with Dropout on wikitext-2 and NYT covid 19 text.
-We implement an LSTM with Dropout Regularization and train it on 2 corpora: wikitext-2 and NYT covid 19.
+We implement an LSTM with Dropout Regularization and train it on 2 corpora: wikitext-2 and NYT covid 19. 
 
 The model architecture is inspired by the paper "Recurrent Neural Network Regularization" by Zaremba et al. (2014), one of the earliest successful implementations of Dropout Regularization on recurrent neural networks.
 
@@ -16,7 +16,7 @@ The `src` directory contains four scripts:
 + `main.py` runs the pipeline: initialize dataset -> create model -> train model. 
 + `datasets.py` is used to load data to train the model. We used wikitext-2 and some articles scraped from NYT on covid 19. 
 
-The `data` directory 2 corpora:
+The `data` directory contains the 2 corpora:
 
-+ `wiki.train.txt`, `wiki.valid.txt`, `wiki.test.txt` contains the wikitext-2 data.
-+ `nyt_covid.train.txt`, `nyt_covid.valid.txt`, `nyt_covid.test.txt` contains the NYT covid 19 data.
++ `wiki.train.txt`, `wiki.valid.txt`, `wiki.test.txt`
++ `nyt_covid.train.txt`, `nyt_covid.valid.txt`, `nyt_covid.test.txt`
